@@ -150,9 +150,9 @@ Since measurement is probabilistic, we run quantum circuits many times ("shots")
 Expected: ~500 zeros, ~500 ones
 \`\`\`
 
-## IQM Quantum Computers
+## Real Quantum Hardware
 
-On IQM hardware, measurement is performed using resonators coupled to transmon qubits, achieving high-fidelity readout.
+On superconducting hardware, measurement is performed using resonators coupled to transmon qubits, achieving high-fidelity readout.
         `
       }
     ]
@@ -191,11 +191,13 @@ Quantum gates are the operations we apply to qubits. They're represented as unit
 - **S Gate**: π/2 phase gate
 - **T Gate**: π/4 phase gate
 
-## IQM Native Gates
+## Native Gates
 
-IQM quantum computers natively support:
-- **PRX (Phased RX)**: Rotation with phase
+Superconducting quantum computers typically support:
+- **PRX (Phased RX)**: Rotation with phase control
 - **CZ (Controlled-Z)**: Two-qubit entangling gate
+
+Other gates are decomposed into these native operations by the transpiler.
         `,
         codeExample: `from qiskit import QuantumCircuit
 import numpy as np
@@ -239,7 +241,7 @@ The CNOT gate flips the target qubit if the control qubit is |1⟩:
 ## CZ (Controlled-Z)
 
 The CZ gate applies a Z gate to the target if control is |1⟩.
-This is the **native two-qubit gate on IQM hardware**.
+This is the **native two-qubit gate on many superconducting systems**.
 
 ## Creating Bell States
 
@@ -376,57 +378,59 @@ For N = 1,000,000:
     ]
   },
   {
-    id: 'iqm-hardware',
-    title: 'IQM Hardware',
-    description: 'Deep dive into IQM quantum processors',
+    id: 'quantum-hardware',
+    title: 'Quantum Hardware',
+    description: 'How superconducting quantum processors work',
     icon: '🖥️',
     difficulty: 'advanced',
     lessons: [
       {
         id: 'architecture',
-        title: 'IQM Quantum Architectures',
+        title: 'Superconducting Quantum Computers',
         duration: '25 min',
         completed: false,
         content: `
-# IQM Quantum Computer Architectures
+# Superconducting Quantum Computers
 
-IQM builds superconducting quantum computers with various architectures.
+Most quantum computers today use superconducting circuits—tiny loops of metal cooled to near absolute zero where electricity flows without resistance.
 
-## Available Systems
+## How They Work
 
-### Garnet (20 qubits)
-- Square lattice topology
-- High connectivity
-- Production-ready
-
-### Emerald (54 qubits)
-- Larger scale computations
-- Advanced error mitigation
-
-### Deneb
-- Research-focused system
-- Novel qubit arrangements
-
-## Superconducting Technology
-
-IQM uses **transmon qubits**:
+### Transmon Qubits
+The most common qubit type:
 - Superconducting circuits cooled to ~15 millikelvin
-- Operated with microwave pulses
-- Native gates: PRX and CZ
+- Controlled with precisely timed microwave pulses
+- Typical coherence times: 50-200 microseconds
 
-## Star Architecture
+### Native Gate Sets
+Different hardware supports different native operations:
+- **PRX/CZ**: Common on many superconducting systems
+- **SX/CNOT**: Used by some IBM systems
+- Compilers translate your circuits to native gates
 
-Some IQM systems use a star topology with:
-- Computational qubits around a central resonator
-- Move gates for qubit shuttling
-- Enhanced connectivity
+## Qubit Topologies
+
+### Square Lattice
+- Grid-like connectivity
+- Each qubit connects to 2-4 neighbors
+- Good for many algorithms
+
+### Heavy Hex
+- Alternating connectivity pattern
+- Reduces crosstalk between qubits
+- Used for error correction
+
+### Star Topology
+- Central resonator with qubits around it
+- Enables flexible qubit routing
+- Useful for certain algorithms
         `,
         codeExample: `from iqm.iqm_client import IQMClient
 
-# Connect to IQM quantum computer
-client = IQMClient("https://your-iqm-server.com")
+# Connect to a quantum computer
+client = IQMClient("https://your-server-url.com")
 
-# Get quantum architecture information
+# Query the hardware architecture
 architecture = client.get_dynamic_quantum_architecture()
 
 print(f"Qubits: {architecture.qubits}")
@@ -435,56 +439,55 @@ print(f"Qubit connectivity: {architecture.qubit_connectivity}")`
       },
       {
         id: 'transpilation',
-        title: 'Circuit Transpilation for IQM',
+        title: 'Circuit Transpilation',
         duration: '30 min',
         completed: false,
         content: `
-# Transpiling Circuits for IQM Hardware
+# Circuit Transpilation
 
-Real quantum hardware has constraints. Transpilation adapts circuits to hardware.
+Real quantum hardware has constraints. Transpilation adapts your abstract circuits to run on actual processors.
 
 ## Why Transpile?
 
-1. **Native Gates**: Convert to PRX and CZ
-2. **Connectivity**: Route qubits for 2-qubit gates
-3. **Optimization**: Reduce gate count and depth
+1. **Native Gates**: Convert to hardware-supported operations
+2. **Connectivity**: Route qubits so 2-qubit gates work on connected pairs
+3. **Optimization**: Reduce gate count and circuit depth
 
-## IQM Transpilation Features
+## The Transpilation Process
 
-### Move Gates
-For star architectures, move gates shuttle qubit states:
+### Gate Decomposition
+Your H and CNOT gates become sequences of native gates:
+- H → rotations around X and Z axes
+- CNOT → CZ with surrounding rotations
 
-\`\`\`python
-from iqm.iqm_client import transpile_insert_moves
-circuit_with_moves = transpile_insert_moves(circuit, architecture)
-\`\`\`
+### Qubit Routing
+If your circuit needs gates between non-adjacent qubits, the transpiler inserts SWAP gates to move qubit states around.
 
 ### Optimization Passes
-- Single-qubit gate fusion
-- RZ gate optimization
-- Redundant gate cancellation
+- Adjacent gates that cancel get removed
+- Single-qubit gate sequences get merged
+- Redundant operations eliminated
 
 ## Best Practices
 
-1. Design for native gate set when possible
-2. Minimize circuit depth
-3. Consider qubit connectivity in circuit design
-4. Use IQM's built-in transpilation
+1. Design with connectivity in mind when possible
+2. Minimize circuit depth—qubits decohere over time
+3. Use higher optimization levels for production runs
+4. Check transpiled circuits to understand overhead
         `,
-        codeExample: `from iqm.qiskit_iqm import IQMProvider
-from qiskit import transpile
+        codeExample: `from qiskit import QuantumCircuit, transpile
+from iqm.qiskit_iqm import IQMProvider
 
-# Connect to IQM
-provider = IQMProvider("https://your-iqm-server.com")
-backend = provider.get_backend()
-
-# Create your circuit
-from qiskit import QuantumCircuit
+# Your abstract circuit
 qc = QuantumCircuit(2)
 qc.h(0)
-qc.cx(0, 1)
+qc.cx(0, 1)  # May not be native!
 
-# Transpile for IQM hardware
+# Connect to hardware
+provider = IQMProvider("https://your-server-url.com")
+backend = provider.get_backend()
+
+# Transpile for the specific hardware
 transpiled = transpile(qc, backend=backend, optimization_level=2)
 
 print("Original depth:", qc.depth())

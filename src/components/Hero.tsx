@@ -37,7 +37,7 @@ export default function Hero() {
           transition={{ delay: 0.2 }}
         >
           <Sparkles className="w-4 h-4 text-yellow-400" />
-          <span className="text-sm text-gray-300">Powered by IQM Quantum Computers</span>
+          <span className="text-sm text-gray-300">Harness the power of quantum phenomena</span>
         </motion.div>
 
         {/* Main Heading */}
@@ -63,8 +63,8 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          Interactive tutorials, visual circuit building, and hands-on experience
-          with real quantum hardware from IQM Finland.
+          Superposition. Entanglement. Interference. Learn the quantum phenomena
+          that make computation fundamentally different, then run circuits on real hardware.
         </motion.p>
 
         {/* CTA Buttons */}
@@ -113,7 +113,7 @@ export default function Hero() {
             {
               icon: '🖥️',
               title: 'Real Hardware',
-              description: 'Run circuits on IQM Garnet, Deneb, and more',
+              description: 'Deploy your circuits to actual superconducting quantum processors',
             },
           ].map((feature, index) => (
             <motion.div

@@ -28,7 +28,7 @@ import {
 import { simulateCircuit, getMeasurementCounts } from '../services/simulator';
 
 // Default circuit code example
-const DEFAULT_CODE = `# Create a Bell State on IQM
+const DEFAULT_CODE = `# Create a Bell State
 # This creates an entangled pair: (|00⟩ + |11⟩) / √2
 
 from qiskit import QuantumCircuit
@@ -111,9 +111,9 @@ shots = 1024
 `,
   },
   {
-    name: 'IQM Native Gates',
-    description: 'Using CZ (native to IQM)',
-    code: `# Using IQM Native CZ Gate
+    name: 'Hardware Native Gates',
+    description: 'Using CZ (native gate)',
+    code: `# Using native CZ gate
 from qiskit import QuantumCircuit
 
 qc = QuantumCircuit(2)
@@ -343,7 +343,7 @@ export default function LiveREPL() {
             Live Quantum REPL
           </h2>
           <p className="text-gray-400 mt-1">
-            Write and execute quantum circuits on IQM hardware or simulate locally
+            Write quantum circuits and run them on simulators or real hardware
           </p>
         </div>
 
@@ -806,11 +806,11 @@ export default function LiveREPL() {
           <div>
             <h4 className="text-sm font-medium text-purple-400 mb-2 flex items-center gap-2">
               <Server className="w-4 h-4" />
-              IQM Hardware Mode
+              Hardware Mode (IQM)
             </h4>
             <p className="text-gray-400 text-sm">
-              Execute circuits on real IQM quantum computers. Requires an IQM Resonance account
-              and API token. Your code is automatically transpiled to IQM's native gate set.
+              Execute circuits on real superconducting quantum processors via IQM Resonance.
+              Requires an account and API token. Circuits are transpiled to hardware-native gates.
             </p>
           </div>
         </div>
@@ -825,7 +825,7 @@ export default function LiveREPL() {
               <span className="text-indigo-400">Two-qubit:</span> cx, cz
             </div>
             <div className="text-gray-400">
-              <span className="text-indigo-400">IQM native:</span> cz, prx
+              <span className="text-indigo-400">Hardware native:</span> cz, prx
             </div>
             <div className="text-gray-400">
               <span className="text-indigo-400">Measurement:</span> measure_all()
@@ -848,7 +848,7 @@ export default function LiveREPL() {
             rel="noopener noreferrer"
             className="text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
           >
-            Get IQM Access <ExternalLink className="w-3 h-3" />
+            Get Hardware Access <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       </div>

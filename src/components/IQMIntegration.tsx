@@ -266,7 +266,7 @@ export default function IQMIntegration() {
       <div className="glass-card rounded-2xl p-6">
         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
           <Server className="w-6 h-6 text-indigo-400" />
-          IQM Quantum Systems
+          Available Hardware (IQM)
         </h3>
         <div className="grid md:grid-cols-3 gap-4">
           {iqmSystems.map((system) => (
@@ -357,9 +357,9 @@ export IQM_TOKENS_FILE="/path/to/tokens.json"
             </div>
           </div>
         </div>
-        <div className="mt-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30">
+        <div className="mt-6 p-4 rounded-xl bg-slate-800/50 border border-slate-700">
           <p className="text-sm text-gray-300">
-            <span className="text-indigo-400 font-semibold">IQM Resonance:</span> Get access to IQM quantum computers through{' '}
+            <span className="text-gray-400 font-semibold">Need hardware access?</span> Sign up at{' '}
             <a
               href="https://www.meetiqm.com/iqm-resonance"
               target="_blank"
@@ -368,6 +368,7 @@ export IQM_TOKENS_FILE="/path/to/tokens.json"
             >
               IQM Resonance <ExternalLink className="w-3 h-3" />
             </a>
+            {' '}to get API credentials.
           </p>
         </div>
       </div>

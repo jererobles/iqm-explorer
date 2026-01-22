@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Github, ExternalLink, Heart } from 'lucide-react'
+import { Github, Heart } from 'lucide-react'
 
 export default function Footer() {
   return (
@@ -9,16 +9,16 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-2">
             <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-4">
-              IQM Quantum Explorer
+              Quantum Explorer
             </h3>
             <p className="text-gray-400 text-sm leading-relaxed mb-4">
               An interactive platform for learning quantum computing concepts
-              and exploring IQM's quantum hardware. Built for students, researchers,
-              and quantum enthusiasts.
+              and running circuits on real hardware. Built for students, researchers,
+              and anyone curious about quantum phenomena.
             </p>
             <div className="flex items-center gap-4">
               <motion.a
-                href="https://github.com/iqm-finland"
+                href="https://github.com/iqm-finland/iqm-client"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
@@ -26,27 +26,18 @@ export default function Footer() {
               >
                 <Github className="w-5 h-5" />
               </motion.a>
-              <motion.a
-                href="https://www.meetiqm.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors"
-                whileHover={{ scale: 1.1 }}
-              >
-                <ExternalLink className="w-5 h-5" />
-              </motion.a>
             </div>
           </div>
 
           {/* Resources */}
           <div>
-            <h4 className="font-semibold text-white mb-4">Resources</h4>
+            <h4 className="font-semibold text-white mb-4">Learn More</h4>
             <ul className="space-y-2">
               {[
-                { label: 'IQM Documentation', url: 'https://docs.meetiqm.com' },
-                { label: 'Qiskit Tutorials', url: 'https://qiskit.org/learn' },
+                { label: 'Qiskit Textbook', url: 'https://qiskit.org/learn' },
                 { label: 'Cirq Documentation', url: 'https://quantumai.google/cirq' },
-                { label: 'Quantum Computing Basics', url: 'https://quantum-computing.ibm.com/composer/docs/iqx/guide/' },
+                { label: 'Quantum Country', url: 'https://quantum.country/' },
+                { label: 'IQM Client Docs', url: 'https://docs.meetiqm.com' },
               ].map((link) => (
                 <li key={link.label}>
                   <a
@@ -62,15 +53,14 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* IQM */}
+          {/* Hardware */}
           <div>
-            <h4 className="font-semibold text-white mb-4">IQM Finland</h4>
+            <h4 className="font-semibold text-white mb-4">Run on Hardware</h4>
             <ul className="space-y-2">
               {[
-                { label: 'About IQM', url: 'https://www.meetiqm.com/about' },
                 { label: 'IQM Resonance', url: 'https://www.meetiqm.com/iqm-resonance' },
-                { label: 'IQM Academy', url: 'https://www.meetiqm.com/iqm-academy' },
-                { label: 'Careers', url: 'https://www.meetiqm.com/careers' },
+                { label: 'IBM Quantum', url: 'https://quantum.ibm.com/' },
+                { label: 'Amazon Braket', url: 'https://aws.amazon.com/braket/' },
               ].map((link) => (
                 <li key={link.label}>
                   <a
@@ -91,7 +81,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm">
-              Educational project for learning quantum computing with IQM systems.
+              An open educational project for learning quantum computing.
             </p>
             <p className="text-gray-500 text-sm flex items-center gap-1">
               Made with <Heart className="w-4 h-4 text-red-500" /> for quantum learners

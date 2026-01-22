@@ -30,7 +30,7 @@ export default function Header({ setActiveTab }: HeaderProps) {
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                IQM Quantum Explorer
+                Quantum Explorer
               </h1>
               <p className="text-xs text-gray-400">Learn. Build. Explore.</p>
             </div>
@@ -39,15 +39,15 @@ export default function Header({ setActiveTab }: HeaderProps) {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
             <a
-              href="https://docs.meetiqm.com"
+              href="https://qiskit.org/learn"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-300 hover:text-white transition-colors text-sm"
             >
-              IQM Docs
+              Qiskit
             </a>
             <a
-              href="https://github.com/iqm-finland"
+              href="https://github.com/iqm-finland/iqm-client"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-300 hover:text-white transition-colors text-sm"
@@ -82,15 +82,15 @@ export default function Header({ setActiveTab }: HeaderProps) {
           >
             <div className="flex flex-col gap-4">
               <a
-                href="https://docs.meetiqm.com"
+                href="https://qiskit.org/learn"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-300 hover:text-white transition-colors"
               >
-                IQM Documentation
+                Qiskit Tutorials
               </a>
               <a
-                href="https://github.com/iqm-finland"
+                href="https://github.com/iqm-finland/iqm-client"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-300 hover:text-white transition-colors"
