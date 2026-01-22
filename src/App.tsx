@@ -7,9 +7,10 @@ import LearningModules from './components/LearningModules'
 import CircuitBuilder from './components/CircuitBuilder'
 import IQMIntegration from './components/IQMIntegration'
 import QuantumVisualizer from './components/QuantumVisualizer'
+import { QuantumScene3D } from './components/quantum3d'
 import Footer from './components/Footer'
 
-type Tab = 'repl' | 'learn' | 'build' | 'integrate' | 'visualize'
+type Tab = 'repl' | 'learn' | 'build' | 'integrate' | 'visualize' | 'visualize3d'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('repl')
@@ -37,6 +38,7 @@ function App() {
               { id: 'build', label: 'Circuit Builder', icon: '🔧' },
               { id: 'integrate', label: 'Run on Hardware', icon: '🔌' },
               { id: 'visualize', label: 'Visualizer', icon: '✨' },
+              { id: 'visualize3d', label: '3D Quantum', icon: '🌐' },
             ].map((tab) => (
               <motion.button
                 key={tab.id}
@@ -69,6 +71,7 @@ function App() {
               {activeTab === 'build' && <CircuitBuilder />}
               {activeTab === 'integrate' && <IQMIntegration />}
               {activeTab === 'visualize' && <QuantumVisualizer />}
+              {activeTab === 'visualize3d' && <QuantumScene3D />}
             </motion.div>
           </AnimatePresence>
         </section>
