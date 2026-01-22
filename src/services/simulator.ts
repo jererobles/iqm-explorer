@@ -89,6 +89,31 @@ function rotationGate(axis: 'x' | 'y' | 'z', angle: number): Complex[][] {
   }
 }
 
+// IQM native PRx gate: rotation around axis in X-Y plane
+// PRx(θ, φ) = exp(-i * θ/2 * (cos(φ)X + sin(φ)Y))
+// Matrix form:
+// | cos(θ/2)            -i·e^(-iφ)·sin(θ/2) |
+// | -i·e^(iφ)·sin(θ/2)   cos(θ/2)           |
+function prxGate(theta: number, phi: number): Complex[][] {
+  const cosTheta = Math.cos(theta / 2);
+  const sinTheta = Math.sin(theta / 2);
+  const cosPhi = Math.cos(phi);
+  const sinPhi = Math.sin(phi);
+
+  // -i·e^(-iφ) = -sin(φ) - i·cos(φ)
+  // -i·e^(iφ) = sin(φ) - i·cos(φ)
+  return [
+    [
+      complex(cosTheta),
+      complex(-sinPhi * sinTheta, -cosPhi * sinTheta),
+    ],
+    [
+      complex(sinPhi * sinTheta, -cosPhi * sinTheta),
+      complex(cosTheta),
+    ],
+  ];
+}
+
 class QuantumSimulator {
   private numQubits: number;
   private state: Complex[];
@@ -201,7 +226,7 @@ export function simulateCircuit(code: string): { result: JobResult; shots: numbe
   }
 
   const sim = new QuantumSimulator(numQubits);
-  const operations: { gate: string; qubits: number[]; angle?: number }[] = [];
+  const operations: { gate: string; qubits: number[]; angle?: number; phi?: number }[] = [];
 
   // Parse operations
   // Note: All patterns require a dot prefix (e.g., ".h(0)") to avoid false matches
@@ -297,6 +322,16 @@ export function simulateCircuit(code: string): { result: JobResult; shots: numbe
       });
       continue;
     }
+
+    // PRx gate (IQM native) - .prx(theta, phi, qubit) or .phased_rx(theta, phi, qubit)
+    const prxMatch = trimmed.match(/\.(?:prx|phased_rx)\s*\(\s*([\d.pi/*-]+)\s*,\s*([\d.pi/*-]+)\s*,\s*(\d+)\s*\)/i);
+    if (prxMatch) {
+      const theta = parseAngle(prxMatch[1]);
+      const phi = parseAngle(prxMatch[2]);
+      const qubit = parseInt(prxMatch[3], 10);
+      operations.push({ gate: 'PRX', qubits: [qubit], angle: theta, phi });
+      continue;
+    }
   }
 
   // Apply operations
@@ -334,6 +369,9 @@ export function simulateCircuit(code: string): { result: JobResult; shots: numbe
         break;
       case 'CZ':
         sim.applyCZ(op.qubits[0], op.qubits[1]);
+        break;
+      case 'PRX':
+        sim.applySingleQubitGate(prxGate(op.angle!, op.phi!), op.qubits[0]);
         break;
     }
   }
@@ -382,4 +420,123 @@ export function getMeasurementCounts(measurements: number[][]): Record<string, n
   }
 
   return counts;
+}
+
+// IQM native gate operations
+export type NativeOperation =
+  | { gate: 'PRX'; qubit: number; theta: number; phi: number }
+  | { gate: 'CZ'; qubit1: number; qubit2: number }
+  | { gate: 'MEASURE'; qubits: number[] };
+
+// Transpile standard gates to IQM native gate set (PRx + CZ)
+// Decompositions:
+//   X = PRx(π, 0)
+//   Y = PRx(π, π/2)
+//   Z = PRx(π, 0) · PRx(0, π) · PRx(π, 0)  [or virtual Z]
+//   H = PRx(π, 0) · PRx(π/2, π/2)
+//   RX(θ) = PRx(θ, 0)
+//   RY(θ) = PRx(θ, π/2)
+//   RZ(θ) = PRx(π, 0) · PRx(θ, π/2) · PRx(π, 0)  [or virtual Z]
+//   S = RZ(π/2)
+//   T = RZ(π/4)
+//   CNOT(c,t) = H(t) · CZ(c,t) · H(t)
+export function transpileToNative(
+  operations: { gate: string; qubits: number[]; angle?: number; phi?: number }[]
+): NativeOperation[] {
+  const native: NativeOperation[] = [];
+
+  for (const op of operations) {
+    switch (op.gate) {
+      case 'X':
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        break;
+
+      case 'Y':
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: Math.PI / 2 });
+        break;
+
+      case 'Z':
+        // Z = X · RY(π) · X = PRx(π,0) · PRx(π, π/2) · PRx(π,0)
+        // Simplified: virtual Z often used, but here we decompose
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: 0, phi: Math.PI });
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        break;
+
+      case 'H':
+        // H = PRx(π, 0) · PRx(π/2, π/2)  (X then sqrt-Y)
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI / 2, phi: Math.PI / 2 });
+        break;
+
+      case 'S':
+        // S = RZ(π/2) - decompose like Z but with π/2
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI / 2, phi: Math.PI / 2 });
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        break;
+
+      case 'T':
+        // T = RZ(π/4) - similar decomposition
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI / 4, phi: Math.PI / 2 });
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        break;
+
+      case 'RX':
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: op.angle!, phi: 0 });
+        break;
+
+      case 'RY':
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: op.angle!, phi: Math.PI / 2 });
+        break;
+
+      case 'RZ':
+        // RZ(θ) = X · RY(θ) · X
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: op.angle!, phi: Math.PI / 2 });
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: Math.PI, phi: 0 });
+        break;
+
+      case 'CX':
+        // CNOT(c,t) = H(t) · CZ(c,t) · H(t)
+        // H = PRx(π, 0) · PRx(π/2, π/2)
+        native.push({ gate: 'PRX', qubit: op.qubits[1], theta: Math.PI, phi: 0 });
+        native.push({ gate: 'PRX', qubit: op.qubits[1], theta: Math.PI / 2, phi: Math.PI / 2 });
+        native.push({ gate: 'CZ', qubit1: op.qubits[0], qubit2: op.qubits[1] });
+        native.push({ gate: 'PRX', qubit: op.qubits[1], theta: Math.PI, phi: 0 });
+        native.push({ gate: 'PRX', qubit: op.qubits[1], theta: Math.PI / 2, phi: Math.PI / 2 });
+        break;
+
+      case 'CZ':
+        native.push({ gate: 'CZ', qubit1: op.qubits[0], qubit2: op.qubits[1] });
+        break;
+
+      case 'PRX':
+        native.push({ gate: 'PRX', qubit: op.qubits[0], theta: op.angle!, phi: op.phi! });
+        break;
+
+      default:
+        console.warn(`Unknown gate ${op.gate}, skipping transpilation`);
+    }
+  }
+
+  return native;
+}
+
+// Format native operations as readable string
+export function formatNativeCircuit(ops: NativeOperation[]): string {
+  return ops
+    .map((op) => {
+      if (op.gate === 'PRX') {
+        const theta = (op.theta / Math.PI).toFixed(4).replace(/\.?0+$/, '');
+        const phi = (op.phi / Math.PI).toFixed(4).replace(/\.?0+$/, '');
+        return `PRx(${theta}π, ${phi}π) q${op.qubit}`;
+      } else if (op.gate === 'CZ') {
+        return `CZ q${op.qubit1}, q${op.qubit2}`;
+      } else {
+        return `MEASURE`;
+      }
+    })
+    .join('\n');
 }
