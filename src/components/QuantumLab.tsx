@@ -608,7 +608,7 @@ export default function QuantumLab() {
   }, [config])
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -683,10 +683,26 @@ export default function QuantumLab() {
         </motion.div>
       )}
 
-      {/* Main content grid - asymmetric layout for visual hierarchy */}
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_1.4fr] gap-3 lg:gap-5" style={{ height: 'calc(100vh - 380px)', minHeight: '520px' }}>
-        {/* Left: Code Editor - narrower for code */}
-        <div className="glass-card overflow-hidden flex flex-col lg:rounded-2xl">
+      {/* Top row: Circuit + Code Editor side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ height: '280px' }}>
+        {/* Left: Circuit Diagram */}
+        <div className="glass-card overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-3 border-b border-gray-700/50">
+            <span className="text-sm font-medium text-white">Circuit</span>
+            <span className="text-xs text-gray-500">{numQubits} qubit{numQubits > 1 ? 's' : ''}</span>
+          </div>
+          <CircuitDiagram
+            operations={operations}
+            numQubits={numQubits}
+            currentStep={currentStep}
+            onStepClick={setCurrentStep}
+            onAddGate={handleAddGate}
+            onRemoveGate={handleRemoveGate}
+          />
+        </div>
+
+        {/* Right: Code Editor */}
+        <div className="glass-card overflow-hidden flex flex-col">
           <div className="flex items-center justify-between p-3 border-b border-gray-700/50">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-red-500" />
@@ -723,45 +739,29 @@ export default function QuantumLab() {
             />
           </div>
         </div>
+      </div>
 
-        {/* Center: Circuit Diagram */}
-        <div className="glass-card overflow-hidden flex flex-col lg:rounded-2xl">
-          <div className="flex items-center justify-between p-3 border-b border-gray-700/50">
-            <span className="text-sm font-medium text-white">Circuit</span>
-            <span className="text-xs text-gray-500">{numQubits} qubit{numQubits > 1 ? 's' : ''}</span>
-          </div>
-          <CircuitDiagram
-            operations={operations}
-            numQubits={numQubits}
-            currentStep={currentStep}
-            onStepClick={setCurrentStep}
-            onAddGate={handleAddGate}
-            onRemoveGate={handleRemoveGate}
-          />
+      {/* 3D Visualization - Full width hero */}
+      <div className="glass-card overflow-hidden flex flex-col" style={{ height: '340px' }}>
+        <div className="flex items-center justify-between p-3 border-b border-gray-700/50">
+          <span className="text-sm font-medium text-white">Quantum State</span>
+          <span className="text-xs text-gray-500">Step {currentStep}/{steps.length - 1}</span>
         </div>
-
-        {/* Right: 3D Visualization - Hero element, larger */}
-        <div className="glass-card overflow-hidden flex flex-col lg:rounded-2xl ring-1 ring-indigo-500/20">
-          <div className="flex items-center justify-between p-3 border-b border-indigo-500/20 bg-gradient-to-r from-indigo-500/5 to-transparent">
-            <span className="text-sm font-medium text-white">Quantum State</span>
-            <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">Step {currentStep}/{steps.length - 1}</span>
-          </div>
-          <div className="flex-1 relative bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/30">
-            <Suspense fallback={<Loader3D />}>
-              <Canvas>
-                <VisualizationScene
-                  qubitStates={currentState.qubitStates}
-                  entanglements={currentState.entanglements}
-                  numQubits={numQubits}
-                />
-              </Canvas>
-            </Suspense>
-          </div>
+        <div className="flex-1 relative bg-gray-900">
+          <Suspense fallback={<Loader3D />}>
+            <Canvas>
+              <VisualizationScene
+                qubitStates={currentState.qubitStates}
+                entanglements={currentState.entanglements}
+                numQubits={numQubits}
+              />
+            </Canvas>
+          </Suspense>
         </div>
       </div>
 
       {/* Timeline Scrubber */}
-      <div className="glass-card p-4 lg:rounded-2xl">
+      <div className="glass-card p-4">
         <div className="flex items-center gap-4">
           <div className="flex gap-2">
             <motion.button
@@ -851,10 +851,10 @@ export default function QuantumLab() {
         </div>
       </div>
 
-      {/* Results / IQM Config - asymmetric split */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-3 lg:gap-5">
+      {/* Results / IQM Config */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Results */}
-        <div className="glass-card p-4 lg:rounded-2xl">
+        <div className="glass-card p-4">
           <h3 className="text-lg font-semibold text-white mb-4">Results</h3>
           {mode === 'simulation' && measurementResults ? (
             <ResultsHistogram results={measurementResults} shots={shots} mode="simulation" />
@@ -878,7 +878,7 @@ export default function QuantumLab() {
         </div>
 
         {/* State Info / IQM Config */}
-        <div className="glass-card p-4 lg:rounded-2xl">
+        <div className="glass-card p-4">
           {mode === 'simulation' ? (
             <>
               <h3 className="text-lg font-semibold text-white mb-4">Current State</h3>
