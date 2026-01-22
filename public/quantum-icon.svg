@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="quantumGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Outer orbit -->
+  <ellipse cx="50" cy="50" rx="40" ry="15" fill="none" stroke="url(#quantumGrad)" stroke-width="2" transform="rotate(-30 50 50)" opacity="0.6"/>
+  <ellipse cx="50" cy="50" rx="40" ry="15" fill="none" stroke="url(#quantumGrad)" stroke-width="2" transform="rotate(30 50 50)" opacity="0.6"/>
+  <ellipse cx="50" cy="50" rx="40" ry="15" fill="none" stroke="url(#quantumGrad)" stroke-width="2" transform="rotate(90 50 50)" opacity="0.6"/>
+  <!-- Center nucleus -->
+  <circle cx="50" cy="50" r="12" fill="url(#quantumGrad)" filter="url(#glow)"/>
+  <!-- Electron dots -->
+  <circle cx="90" cy="50" r="5" fill="#06b6d4" filter="url(#glow)">
+    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="50" cy="10" r="5" fill="#8b5cf6" filter="url(#glow)">
+    <animateTransform attributeName="transform" type="rotate" from="120 50 50" to="480 50 50" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="20" cy="70" r="5" fill="#6366f1" filter="url(#glow)">
+    <animateTransform attributeName="transform" type="rotate" from="240 50 50" to="600 50 50" dur="6s" repeatCount="indefinite"/>
+  </circle>
+</svg>
