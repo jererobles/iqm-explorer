@@ -29,46 +29,9 @@ function App() {
 
           {/* Navigation Tabs */}
           <section className="max-w-7xl mx-auto px-6 py-8">
-            <div className="flex gap-2 justify-center mb-8">
-              {[
-                { id: 'lab', label: 'Quantum Lab', icon: '🔬', description: 'Code, Build & Visualize' },
-                { id: 'hardware', label: 'Hardware', icon: '🔌', description: 'Run on IQM' },
-              ].map((tab) => (
-                <motion.button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as Tab)}
-                  className={`px-8 py-4 rounded-xl font-medium transition-all duration-300 flex flex-col items-center gap-1 ${
-                    activeTab === tab.id
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30'
-                      : 'glass-card text-gray-300 hover:text-white'
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div className="flex items-center gap-2 text-lg">
-                    <span>{tab.icon}</span>
-                    {tab.label}
-                  </div>
-                  <span className={`text-xs ${activeTab === tab.id ? 'text-white/70' : 'text-gray-500'}`}>
-                    {tab.description}
-                  </span>
-                </motion.button>
-              ))}
-            </div>
 
             {/* Tab Content */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                {activeTab === 'lab' && <QuantumLab />}
-                {activeTab === 'hardware' && <IQMIntegration />}
-              </motion.div>
-            </AnimatePresence>
+            {activeTab === 'lab' && <QuantumLab />}
           </section>
         </main>
 
