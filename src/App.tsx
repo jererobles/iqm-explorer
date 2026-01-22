@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import QuantumLab from './components/QuantumLab'
-import IQMIntegration from './components/IQMIntegration'
 import Footer from './components/Footer'
 import { QuantumProvider } from './context/QuantumContext'
 
