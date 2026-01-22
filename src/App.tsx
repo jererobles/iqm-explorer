@@ -33,7 +33,7 @@ function App() {
             {[
               { id: 'learn', label: 'Learn Quantum', icon: '📚' },
               { id: 'build', label: 'Circuit Builder', icon: '🔧' },
-              { id: 'integrate', label: 'IQM Integration', icon: '🔌' },
+              { id: 'integrate', label: 'Run on Hardware', icon: '🔌' },
               { id: 'visualize', label: 'Visualizer', icon: '✨' },
             ].map((tab) => (
               <motion.button
