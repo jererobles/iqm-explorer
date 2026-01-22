@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Github, ExternalLink, Heart } from 'lucide-react'
+import { Github, Heart } from 'lucide-react'
 
 export default function Footer() {
   return (
