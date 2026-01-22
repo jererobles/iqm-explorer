@@ -3,7 +3,7 @@ import { Atom, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
 interface HeaderProps {
-  setActiveTab: (tab: 'learn' | 'build' | 'integrate' | 'visualize') => void
+  setActiveTab: (tab: 'lab' | 'hardware') => void
 }
 
 export default function Header({ setActiveTab }: HeaderProps) {
@@ -21,7 +21,7 @@ export default function Header({ setActiveTab }: HeaderProps) {
           {/* Logo */}
           <motion.div
             className="flex items-center gap-3 cursor-pointer"
-            onClick={() => setActiveTab('learn')}
+            onClick={() => setActiveTab('lab')}
             whileHover={{ scale: 1.02 }}
           >
             <div className="relative">
