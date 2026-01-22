@@ -82,6 +82,10 @@ function rotationGate(axis: 'x' | 'y' | 'z', angle: number): Complex[][] {
         [complex(Math.cos(angle / 2), -Math.sin(angle / 2)), complex(0)],
         [complex(0), complex(Math.cos(angle / 2), Math.sin(angle / 2))],
       ];
+    default:
+      // This should never happen due to TypeScript's type checking,
+      // but provides a runtime safety net
+      throw new Error(`Unknown rotation axis: ${axis}`);
   }
 }
 
@@ -200,53 +204,55 @@ export function simulateCircuit(code: string): { result: JobResult; shots: numbe
   const operations: { gate: string; qubits: number[]; angle?: number }[] = [];
 
   // Parse operations
+  // Note: All patterns require a dot prefix (e.g., ".h(0)") to avoid false matches
+  // like "t(1)" in "QuantumCircuit(1)" being parsed as a T gate
   for (const line of lines) {
     const trimmed = line.trim();
 
     // Hadamard
-    const hMatch = trimmed.match(/\.?h\s*\(\s*(\d+)\s*\)/i);
+    const hMatch = trimmed.match(/\.h\s*\(\s*(\d+)\s*\)/i);
     if (hMatch) {
       operations.push({ gate: 'H', qubits: [parseInt(hMatch[1], 10)] });
       continue;
     }
 
     // X gate
-    const xMatch = trimmed.match(/\.?x\s*\(\s*(\d+)\s*\)/i);
+    const xMatch = trimmed.match(/\.x\s*\(\s*(\d+)\s*\)/i);
     if (xMatch) {
       operations.push({ gate: 'X', qubits: [parseInt(xMatch[1], 10)] });
       continue;
     }
 
     // Y gate
-    const yMatch = trimmed.match(/\.?y\s*\(\s*(\d+)\s*\)/i);
+    const yMatch = trimmed.match(/\.y\s*\(\s*(\d+)\s*\)/i);
     if (yMatch) {
       operations.push({ gate: 'Y', qubits: [parseInt(yMatch[1], 10)] });
       continue;
     }
 
     // Z gate
-    const zMatch = trimmed.match(/\.?z\s*\(\s*(\d+)\s*\)/i);
+    const zMatch = trimmed.match(/\.z\s*\(\s*(\d+)\s*\)/i);
     if (zMatch) {
       operations.push({ gate: 'Z', qubits: [parseInt(zMatch[1], 10)] });
       continue;
     }
 
     // S gate
-    const sMatch = trimmed.match(/\.?s\s*\(\s*(\d+)\s*\)/i);
+    const sMatch = trimmed.match(/\.s\s*\(\s*(\d+)\s*\)/i);
     if (sMatch) {
       operations.push({ gate: 'S', qubits: [parseInt(sMatch[1], 10)] });
       continue;
     }
 
     // T gate
-    const tMatch = trimmed.match(/\.?t\s*\(\s*(\d+)\s*\)/i);
+    const tMatch = trimmed.match(/\.t\s*\(\s*(\d+)\s*\)/i);
     if (tMatch) {
       operations.push({ gate: 'T', qubits: [parseInt(tMatch[1], 10)] });
       continue;
     }
 
     // RX gate
-    const rxMatch = trimmed.match(/\.?rx\s*\(\s*([\d.pi/*-]+)\s*,?\s*(\d+)?\s*\)/i);
+    const rxMatch = trimmed.match(/\.rx\s*\(\s*([\d.pi/*-]+)\s*,?\s*(\d+)?\s*\)/i);
     if (rxMatch) {
       const angle = parseAngle(rxMatch[1]);
       const qubit = rxMatch[2] ? parseInt(rxMatch[2], 10) : 0;
@@ -255,7 +261,7 @@ export function simulateCircuit(code: string): { result: JobResult; shots: numbe
     }
 
     // RY gate
-    const ryMatch = trimmed.match(/\.?ry\s*\(\s*([\d.pi/*-]+)\s*,?\s*(\d+)?\s*\)/i);
+    const ryMatch = trimmed.match(/\.ry\s*\(\s*([\d.pi/*-]+)\s*,?\s*(\d+)?\s*\)/i);
     if (ryMatch) {
       const angle = parseAngle(ryMatch[1]);
       const qubit = ryMatch[2] ? parseInt(ryMatch[2], 10) : 0;
@@ -264,7 +270,7 @@ export function simulateCircuit(code: string): { result: JobResult; shots: numbe
     }
 
     // RZ gate
-    const rzMatch = trimmed.match(/\.?rz\s*\(\s*([\d.pi/*-]+)\s*,?\s*(\d+)?\s*\)/i);
+    const rzMatch = trimmed.match(/\.rz\s*\(\s*([\d.pi/*-]+)\s*,?\s*(\d+)?\s*\)/i);
     if (rzMatch) {
       const angle = parseAngle(rzMatch[1]);
       const qubit = rzMatch[2] ? parseInt(rzMatch[2], 10) : 0;
@@ -273,7 +279,7 @@ export function simulateCircuit(code: string): { result: JobResult; shots: numbe
     }
 
     // CNOT / CX
-    const cxMatch = trimmed.match(/\.?(?:cx|cnot)\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+    const cxMatch = trimmed.match(/\.(?:cx|cnot)\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/i);
     if (cxMatch) {
       operations.push({
         gate: 'CX',
@@ -283,7 +289,7 @@ export function simulateCircuit(code: string): { result: JobResult; shots: numbe
     }
 
     // CZ
-    const czMatch = trimmed.match(/\.?cz\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+    const czMatch = trimmed.match(/\.cz\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/i);
     if (czMatch) {
       operations.push({
         gate: 'CZ',
