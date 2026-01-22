@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import QuantumLab from './components/QuantumLab'
