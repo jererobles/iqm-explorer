@@ -268,7 +268,9 @@ function parseAngle(angleStr: string): number {
 
 class IQMApiService {
   private config: IQMConfig | null = null;
-  private pollingInterval: number = 2000; // 2 seconds
+  private basePollingInterval: number = 5000; // 5 seconds base
+  private maxPollingInterval: number = 30000; // 30 seconds max
+  private currentPollingInterval: number = 5000;
 
   setConfig(config: IQMConfig) {
     this.config = config;
@@ -332,16 +334,32 @@ class IQMApiService {
     return response.json();
   }
 
-  async getJobStatus(jobId: string): Promise<JobResponse> {
+  async getJobStatus(jobId: string, retryCount: number = 0): Promise<JobResponse> {
     const response = await fetch(`${this.getBaseUrl()}/jobs/${jobId}/status`, {
       method: 'GET',
       headers: this.getHeaders(),
     });
 
+    // Handle rate limiting with exponential backoff
+    if (response.status === 429) {
+      if (retryCount >= 3) {
+        throw new Error('Rate limited by IQM API. Please wait a moment and try again.');
+      }
+
+      // Exponential backoff: 5s, 10s, 20s
+      const backoffTime = this.basePollingInterval * Math.pow(2, retryCount);
+      this.currentPollingInterval = Math.min(backoffTime, this.maxPollingInterval);
+
+      await new Promise(resolve => setTimeout(resolve, backoffTime));
+      return this.getJobStatus(jobId, retryCount + 1);
+    }
+
     if (!response.ok) {
       throw new Error(`Failed to get job status: ${response.status} ${response.statusText}`);
     }
 
+    // Reset polling interval on success
+    this.currentPollingInterval = this.basePollingInterval;
     return response.json();
   }
 
@@ -364,20 +382,43 @@ class IQMApiService {
     maxWaitTime: number = 300000 // 5 minutes
   ): Promise<JobResult> {
     const startTime = Date.now();
+    let pollCount = 0;
+
+    // Reset polling interval at start
+    this.currentPollingInterval = this.basePollingInterval;
 
     while (Date.now() - startTime < maxWaitTime) {
-      const status = await this.getJobStatus(jobId);
+      try {
+        const status = await this.getJobStatus(jobId);
 
-      if (onStatusUpdate) {
-        onStatusUpdate(status);
+        if (onStatusUpdate) {
+          onStatusUpdate(status);
+        }
+
+        if (status.status === 'ready' || status.status === 'failed') {
+          return this.getJobResult(jobId);
+        }
+
+        // Gradually increase polling interval to be gentle on the API
+        pollCount++;
+        if (pollCount > 5) {
+          this.currentPollingInterval = Math.min(
+            this.currentPollingInterval * 1.2,
+            this.maxPollingInterval
+          );
+        }
+
+        // Wait before polling again
+        await new Promise(resolve => setTimeout(resolve, this.currentPollingInterval));
+      } catch (error) {
+        // If we get a rate limit error, the getJobStatus already handled backoff
+        // Just continue the loop
+        if (error instanceof Error && error.message.includes('Rate limited')) {
+          throw error;
+        }
+        // For other errors, wait and retry
+        await new Promise(resolve => setTimeout(resolve, this.currentPollingInterval));
       }
-
-      if (status.status === 'ready' || status.status === 'failed') {
-        return this.getJobResult(jobId);
-      }
-
-      // Wait before polling again
-      await new Promise(resolve => setTimeout(resolve, this.pollingInterval));
     }
 
     throw new Error('Job timed out waiting for completion');
