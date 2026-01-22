@@ -67,69 +67,6 @@ export default function Hero() {
           that make computation fundamentally different, then run circuits on real hardware.
         </motion.p>
 
-        {/* CTA Buttons */}
-        <motion.div
-          className="flex flex-wrap gap-4 justify-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <motion.button
-            className="btn-quantum flex items-center gap-2"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Zap className="w-5 h-5" />
-            Start Learning
-          </motion.button>
-          <motion.button
-            className="px-6 py-3 rounded-xl font-semibold glass-card text-gray-200 flex items-center gap-2"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Cpu className="w-5 h-5" />
-            Build Circuits
-          </motion.button>
-        </motion.div>
-
-        {/* Feature Cards */}
-        <motion.div
-          className="grid md:grid-cols-3 gap-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-        >
-          {[
-            {
-              icon: '🎓',
-              title: 'Interactive Learning',
-              description: 'Step-by-step tutorials from qubits to quantum algorithms',
-            },
-            {
-              icon: '🔬',
-              title: 'Visual Circuit Builder',
-              description: 'Drag-and-drop gates to design quantum circuits',
-            },
-            {
-              icon: '🖥️',
-              title: 'Real Hardware',
-              description: 'Deploy your circuits to actual superconducting quantum processors',
-            },
-          ].map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              className="glass-card rounded-2xl p-6 text-left"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 + index * 0.1 }}
-              whileHover={{ scale: 1.02 }}
-            >
-              <span className="text-4xl mb-4 block">{feature.icon}</span>
-              <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-              <p className="text-gray-400 text-sm">{feature.description}</p>
-            </motion.div>
-          ))}
-        </motion.div>
       </div>
     </section>
   )
