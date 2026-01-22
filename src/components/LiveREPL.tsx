@@ -138,13 +138,37 @@ shots = 1024
 
 interface JobHistoryEntry {
   id: string;
-  timestamp: Date;
+  timestamp: string; // ISO string for serialization
   code: string;
   mode: 'simulation' | 'iqm';
   status: 'pending' | 'running' | 'completed' | 'failed';
   result?: JobResult;
   error?: string;
   counts?: Record<string, number>;
+  iqmJobId?: string; // For resuming IQM job polling
+}
+
+// Local storage key for history
+const HISTORY_STORAGE_KEY = 'iqm_repl_history';
+
+function saveHistory(history: JobHistoryEntry[]) {
+  try {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function loadHistory(): JobHistoryEntry[] {
+  try {
+    const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return [];
 }
 
 export default function LiveREPL() {
@@ -177,13 +201,84 @@ export default function LiveREPL() {
   // Job history
   const [history, setHistory] = useState<JobHistoryEntry[]>([]);
 
-  // Load config on mount
+  // Load config and history on mount
   useEffect(() => {
     const savedConfig = loadConfig();
     if (savedConfig) {
       setConfig(savedConfig);
     }
+
+    const savedHistory = loadHistory();
+    if (savedHistory.length > 0) {
+      setHistory(savedHistory);
+    }
   }, []);
+
+  // Save history whenever it changes
+  useEffect(() => {
+    if (history.length > 0) {
+      saveHistory(history);
+    }
+  }, [history]);
+
+  // Resume polling for pending IQM jobs on mount
+  useEffect(() => {
+    const resumePendingJobs = async () => {
+      const pendingJobs = history.filter(
+        (h) => h.mode === 'iqm' && h.status === 'running' && h.iqmJobId
+      );
+
+      if (pendingJobs.length === 0 || !iqmApi.isConfigured()) return;
+
+      for (const job of pendingJobs) {
+        if (!job.iqmJobId) continue;
+
+        setStatus(`Resuming job ${job.iqmJobId}...`);
+
+        try {
+          const result = await iqmApi.waitForJob(job.iqmJobId, (statusUpdate) => {
+            setStatus(`Job ${job.iqmJobId}: ${statusUpdate.status}`);
+          });
+
+          if (result.status === 'ready') {
+            const measurements = Object.values(result.measurements || {})[0] || [];
+            const counts = getMeasurementCounts(measurements);
+
+            setHistory((prev) =>
+              prev.map((h) =>
+                h.id === job.id
+                  ? { ...h, status: 'completed', result, counts }
+                  : h
+              )
+            );
+
+            setStatus(`Job ${job.iqmJobId} completed!`);
+          } else {
+            setHistory((prev) =>
+              prev.map((h) =>
+                h.id === job.id
+                  ? { ...h, status: 'failed', error: result.message || 'Job failed' }
+                  : h
+              )
+            );
+          }
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to resume job';
+          setHistory((prev) =>
+            prev.map((h) =>
+              h.id === job.id ? { ...h, status: 'failed', error: errorMessage } : h
+            )
+          );
+        }
+      }
+
+      setStatus('');
+    };
+
+    // Small delay to ensure config is loaded first
+    const timer = setTimeout(resumePendingJobs, 1000);
+    return () => clearTimeout(timer);
+  }, []); // Only run once on mount
 
   const handleSaveConfig = useCallback(() => {
     saveConfig(config);
@@ -211,7 +306,7 @@ export default function LiveREPL() {
 
     const historyEntry: JobHistoryEntry = {
       id: Date.now().toString(),
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
       code,
       mode,
       status: 'running',
@@ -251,8 +346,21 @@ export default function LiveREPL() {
           );
         }
 
+        // Submit the job first
+        setStatus('Submitting job to IQM...');
+
         const { result: iqmResult, jobId } = await iqmApi.executeCircuit(code, (statusMsg) => {
           setStatus(statusMsg);
+
+          // Store the job ID as soon as we have it so we can resume if page refreshes
+          if (statusMsg.includes('Job submitted:')) {
+            const submittedJobId = statusMsg.replace('Job submitted: ', '').trim();
+            setHistory((prev) =>
+              prev.map((h) =>
+                h.id === historyEntry.id ? { ...h, iqmJobId: submittedJobId } : h
+              )
+            );
+          }
         });
 
         if (iqmResult.status === 'failed') {
@@ -272,7 +380,7 @@ export default function LiveREPL() {
         setHistory((prev) =>
           prev.map((h) =>
             h.id === historyEntry.id
-              ? { ...h, status: 'completed', result: iqmResult, counts }
+              ? { ...h, status: 'completed', result: iqmResult, counts, iqmJobId: jobId }
               : h
           )
         );
@@ -642,13 +750,25 @@ export default function LiveREPL() {
                   {history.length === 0 ? (
                     <p className="text-gray-500 text-sm text-center py-4">No history yet</p>
                   ) : (
-                    history.map((entry) => (
-                      <button
-                        key={entry.id}
-                        onClick={() => loadFromHistory(entry)}
-                        className="w-full text-left p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
+                    <>
+                      <div className="flex justify-end mb-2">
+                        <button
+                          onClick={() => {
+                            setHistory([]);
+                            localStorage.removeItem(HISTORY_STORAGE_KEY);
+                          }}
+                          className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                        >
+                          Clear History
+                        </button>
+                      </div>
+                      {history.map((entry) => (
+                        <button
+                          key={entry.id}
+                          onClick={() => loadFromHistory(entry)}
+                          className="w-full text-left p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
                           <span
                             className={`text-xs px-2 py-0.5 rounded ${
                               entry.mode === 'simulation'
@@ -670,11 +790,17 @@ export default function LiveREPL() {
                             {entry.status}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-400 mt-1">
-                          {entry.timestamp.toLocaleTimeString()}
+                        <div className="text-sm text-gray-400 mt-1 flex items-center gap-2">
+                          <span>{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                          {entry.iqmJobId && (
+                            <span className="text-xs font-mono text-gray-500">
+                              {entry.iqmJobId.slice(0, 8)}...
+                            </span>
+                          )}
                         </div>
                       </button>
-                    ))
+                      ))}
+                    </>
                   )}
                 </div>
               </motion.div>
