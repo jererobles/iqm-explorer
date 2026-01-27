@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, ReactNode } from 'react'
 
 // Gate operation parsed from code
 export interface GateOperation {
@@ -238,6 +238,19 @@ function parseCode(code: string): { numQubits: number; operations: GateOperation
       })
       return
     }
+
+    // Measurement - single qubit
+    const mMatch = trimmed.match(/\.measure\s*\(\s*(\d+)/i)
+    if (mMatch) {
+      operations.push({
+        id: `m-${lineNumber}`,
+        gate: 'M',
+        qubits: [parseInt(mMatch[1], 10)],
+        lineNumber,
+        code: trimmed,
+      })
+      return
+    }
   })
 
   return { numQubits, operations, shots }
@@ -277,7 +290,30 @@ function calculateSteps(numQubits: number, operations: GateOperation[]): Circuit
     const newQubitStates = [...currentQubitStates]
     const newEntanglements = [...currentEntanglements]
 
-    if (op.gate in GATE_TRANSFORMS && op.qubits.length === 1) {
+    if (op.gate === 'M') {
+      // Measurement: collapse qubit to |0⟩ or |1⟩ based on probability
+      const qubit = op.qubits[0]
+      if (qubit < numQubits) {
+        const state = currentQubitStates[qubit]
+        // Probability of measuring |1⟩
+        const prob1 = Math.sin(state.theta / 2) ** 2
+        // For visualization, collapse based on probability threshold
+        // Use deterministic collapse: if prob > 0.5, collapse to |1⟩
+        // In real simulation, this would be random
+        if (prob1 > 0.5) {
+          newQubitStates[qubit] = { theta: Math.PI, phi: 0 } // |1⟩ state
+        } else {
+          newQubitStates[qubit] = { theta: 0, phi: 0 } // |0⟩ state
+        }
+        // Measurement breaks entanglement
+        const qubitIdx = qubit
+        const filteredEntanglements = newEntanglements.filter(
+          ([a, b]) => a !== qubitIdx && b !== qubitIdx
+        )
+        newEntanglements.length = 0
+        newEntanglements.push(...filteredEntanglements)
+      }
+    } else if (op.gate in GATE_TRANSFORMS && op.qubits.length === 1) {
       const qubit = op.qubits[0]
       if (qubit < numQubits) {
         newQubitStates[qubit] = GATE_TRANSFORMS[op.gate](currentQubitStates[qubit])
@@ -393,6 +429,9 @@ qc = QuantumCircuit(${numQubits})
       case 'RZ':
         code += `qc.rz(${op.params?.[0] || Math.PI / 2}, ${qubit})\n`
         break
+      case 'M':
+        code += `qc.measure(${qubit}, ${qubit})  # Measure qubit ${qubit}\n`
+        break
     }
   }
 
@@ -504,6 +543,28 @@ export function QuantumProvider({ children }: { children: ReactNode }) {
       setIsSimulating(false)
     }
   }, [code, steps.length])
+
+  // Auto-run simulation when circuit changes
+  useEffect(() => {
+    if (operations.length > 0) {
+      // Debounce simulation
+      const timer = setTimeout(async () => {
+        setIsSimulating(true)
+        try {
+          const { simulateCircuit, getMeasurementCounts } = await import('../services/simulator')
+          const result = simulateCircuit(code)
+          const counts = getMeasurementCounts(result.result.measurements?.circuit || [])
+          setMeasurementResults(counts)
+        } catch (error) {
+          console.error('Auto-simulation error:', error)
+        } finally {
+          setIsSimulating(false)
+        }
+      }, 500) // 500ms debounce
+
+      return () => clearTimeout(timer)
+    }
+  }, [code, operations.length])
 
   const value: QuantumContextType = {
     code,

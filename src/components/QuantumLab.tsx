@@ -757,7 +757,6 @@ export default function QuantumLab() {
     shots,
     measurementResults,
     isSimulating,
-    runSimulation,
   } = useQuantum()
 
   const [mode, setMode] = useState<'simulation' | 'iqm'>('simulation')
@@ -1284,31 +1283,48 @@ export default function QuantumLab() {
           </div>
 
           <div className="flex items-center gap-2">
-            <motion.button
-              onClick={mode === 'simulation' ? runSimulation : runOnIqm}
-              disabled={isSimulating || isRunningIqm}
-              className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all ${
-                isSimulating || isRunningIqm
-                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                  : mode === 'simulation'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:opacity-90'
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90'
-              }`}
-              whileHover={{ scale: isSimulating || isRunningIqm ? 1 : 1.02 }}
-              whileTap={{ scale: isSimulating || isRunningIqm ? 1 : 0.98 }}
-            >
-              {isSimulating || isRunningIqm ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Running...
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" />
-                  Run
-                </>
-              )}
-            </motion.button>
+            {/* Auto-simulation indicator for simulation mode */}
+            {mode === 'simulation' && (
+              <div className="flex items-center gap-2 text-sm">
+                {isSimulating ? (
+                  <span className="flex items-center gap-1.5 text-cyan-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Simulating...
+                  </span>
+                ) : measurementResults ? (
+                  <span className="flex items-center gap-1.5 text-green-400">
+                    <Zap className="w-4 h-4" />
+                    Auto-simulated
+                  </span>
+                ) : null}
+              </div>
+            )}
+            {/* Only show Run button for IQM mode - simulation is automatic */}
+            {mode === 'iqm' && (
+              <motion.button
+                onClick={runOnIqm}
+                disabled={isRunningIqm}
+                className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all ${
+                  isRunningIqm
+                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90'
+                }`}
+                whileHover={{ scale: isRunningIqm ? 1 : 1.02 }}
+                whileTap={{ scale: isRunningIqm ? 1 : 0.98 }}
+              >
+                {isRunningIqm ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Running on IQM...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Run on IQM
+                  </>
+                )}
+              </motion.button>
+            )}
           </div>
         </div>
 
@@ -1377,7 +1393,9 @@ export default function QuantumLab() {
               <div>
                 <h4 className="text-white font-medium text-sm">Final State</h4>
                 <p className="text-gray-400 text-xs mt-0.5">
-                  Circuit complete! Click "Run" to simulate measurements and see the probability distribution.
+                  Circuit complete! {mode === 'simulation'
+                    ? 'Results are automatically calculated - see the probability distribution below.'
+                    : 'Click "Run on IQM" to execute on real quantum hardware.'}
                 </p>
               </div>
             </div>
@@ -1401,7 +1419,9 @@ export default function QuantumLab() {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <Zap className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p>Run the circuit to see measurement results</p>
+              <p>{mode === 'simulation'
+                ? isSimulating ? 'Calculating results...' : 'Add gates to see measurement results'
+                : 'Configure IQM and run to see hardware results'}</p>
             </div>
           )}
           {iqmStatus && mode === 'iqm' && (
