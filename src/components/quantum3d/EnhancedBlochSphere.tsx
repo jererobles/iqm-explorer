@@ -135,7 +135,9 @@ function QuantumField({
 
       // Calculate new position on sphere with orbital motion
       const y = posAttr[i * 3 + 1]
-      const horizontalRadius = Math.sqrt(r * r - y * y * 0.95)
+      // Clamp to prevent NaN from negative sqrt argument
+      const horizontalRadiusSq = Math.max(0.0001, r * r - y * y * 0.95)
+      const horizontalRadius = Math.sqrt(horizontalRadiusSq)
 
       posAttr[i * 3] = Math.cos(newAngle) * horizontalRadius - dx * attractionStrength
       posAttr[i * 3 + 2] = Math.sin(newAngle) * horizontalRadius - dz * attractionStrength
@@ -146,7 +148,9 @@ function QuantumField({
         posAttr[i * 3] ** 2 + posAttr[i * 3 + 1] ** 2 + posAttr[i * 3 + 2] ** 2
       )
       if (currentDist > radius * 1.3 || currentDist < radius * 0.8) {
-        const normalize = radius / currentDist
+        // Prevent division by zero
+        const safeDist = Math.max(0.0001, currentDist)
+        const normalize = radius / safeDist
         posAttr[i * 3] *= normalize
         posAttr[i * 3 + 1] *= normalize
         posAttr[i * 3 + 2] *= normalize

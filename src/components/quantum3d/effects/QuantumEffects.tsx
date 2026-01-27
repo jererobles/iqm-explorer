@@ -300,13 +300,17 @@ function VortexParticles({
 }) {
   const pointsRef = useRef<THREE.Points>(null)
 
-  const { positions, colors, data } = useMemo(() => {
+  const { positions, colors, data, safeInnerRadius, safeOuterRadius } = useMemo(() => {
     const pos = new Float32Array(count * 3)
     const col = new Float32Array(count * 3)
     const particleData = new Float32Array(count * 4) // radius, angle, speed, phase
 
+    // Ensure safe radius values to prevent NaN
+    const safeInner = Math.max(0.1, innerRadius)
+    const safeOuter = Math.max(safeInner + 0.1, outerRadius)
+
     for (let i = 0; i < count; i++) {
-      const radius = innerRadius + Math.random() * (outerRadius - innerRadius)
+      const radius = safeInner + Math.random() * (safeOuter - safeInner)
       const angle = Math.random() * Math.PI * 2
       const z = (Math.random() - 0.5) * 2
 
@@ -327,7 +331,7 @@ function VortexParticles({
       particleData[i * 4 + 3] = Math.random() * Math.PI * 2
     }
 
-    return { positions: pos, colors: col, data: particleData }
+    return { positions: pos, colors: col, data: particleData, safeInnerRadius: safeInner, safeOuterRadius: safeOuter }
   }, [count, innerRadius, outerRadius])
 
   useFrame((state, delta) => {
@@ -343,16 +347,17 @@ function VortexParticles({
       // Gradually decrease radius
       data[i * 4] -= delta * 0.3 * data[i * 4 + 2]
 
-      const radius = data[i * 4]
+      // Clamp radius to prevent negative values
+      const radius = Math.max(0, data[i * 4])
       const angle = data[i * 4 + 1]
 
       posAttr[i * 3] = Math.cos(angle) * radius
       posAttr[i * 3 + 1] = Math.sin(angle) * radius
       posAttr[i * 3 + 2] = Math.sin(time + data[i * 4 + 3]) * 0.5
 
-      // Reset particles that reach center
-      if (radius < innerRadius * 0.8) {
-        data[i * 4] = outerRadius * (0.8 + Math.random() * 0.2)
+      // Reset particles that reach center (use safe radius values)
+      if (radius < safeInnerRadius * 0.8) {
+        data[i * 4] = safeOuterRadius * (0.8 + Math.random() * 0.2)
         data[i * 4 + 1] = Math.random() * Math.PI * 2
       }
     }
