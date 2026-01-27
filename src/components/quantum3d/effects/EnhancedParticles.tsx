@@ -511,14 +511,18 @@ export function Sparkles({
     const siz = new Float32Array(count)
     const ops = new Float32Array(count)
 
+    // Ensure safe radius to avoid division by zero
+    const safeRadius = Math.max(0.1, radius)
+    const heightScale = height / safeRadius
+
     for (let i = 0; i < count; i++) {
       // Random position in sphere
       const theta = Math.random() * Math.PI * 2
       const phi = Math.acos(2 * Math.random() - 1)
-      const r = Math.pow(Math.random(), 0.5) * radius
+      const r = Math.pow(Math.random(), 0.5) * safeRadius
 
       pos[i * 3] = r * Math.sin(phi) * Math.cos(theta)
-      pos[i * 3 + 1] = (r * Math.cos(phi)) * (height / radius)
+      pos[i * 3 + 1] = (r * Math.cos(phi)) * heightScale
       pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta)
 
       pha[i] = Math.random() * Math.PI * 2
