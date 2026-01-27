@@ -9,16 +9,22 @@ interface ProbabilityLandscapeProps {
   maxHeight?: number
   barWidth?: number
   spacing?: number
+  enhanced?: boolean
 }
 
-// Color based on phase angle (0 to 2π)
-function phaseToColor(phase: number): string {
+// Phase to color conversion
+function phaseToColor(phase: number): THREE.Color {
+  const hue = (phase / (2 * Math.PI))
+  return new THREE.Color().setHSL(hue, 0.85, 0.55)
+}
+
+function phaseToColorString(phase: number): string {
   const hue = (phase / (2 * Math.PI)) * 360
-  return `hsl(${hue}, 80%, 60%)`
+  return `hsl(${hue}, 85%, 55%)`
 }
 
-// Single probability bar
-function ProbabilityBar({
+// Enhanced probability tower with glow effects
+function ProbabilityTower({
   state,
   probability,
   phase = 0,
@@ -35,84 +41,190 @@ function ProbabilityBar({
   barWidth: number
   index: number
 }) {
-  const meshRef = useRef<THREE.Mesh>(null)
+  const groupRef = useRef<THREE.Group>(null)
+  const towerRef = useRef<THREE.Mesh>(null)
+  const glowRef = useRef<THREE.Mesh>(null)
+  const ringsRef = useRef<THREE.Group>(null)
   const targetHeight = useRef(probability * maxHeight)
   const currentHeight = useRef(0.01)
 
-  // Animate height change
-  useFrame((_, delta) => {
-    if (meshRef.current) {
-      targetHeight.current = probability * maxHeight
-      currentHeight.current = THREE.MathUtils.lerp(
-        currentHeight.current,
-        Math.max(targetHeight.current, 0.01),
-        delta * 5
-      )
+  const color = useMemo(() => phaseToColor(phase), [phase])
+  const colorString = useMemo(() => phaseToColorString(phase), [phase])
 
-      meshRef.current.scale.y = currentHeight.current
-      meshRef.current.position.y = currentHeight.current / 2
+  // Animate tower
+  useFrame((state, delta) => {
+    const time = state.clock.elapsedTime
 
-      // Subtle pulse for non-zero probabilities
+    // Smooth height transition
+    targetHeight.current = probability * maxHeight
+    currentHeight.current = THREE.MathUtils.lerp(
+      currentHeight.current,
+      Math.max(targetHeight.current, 0.01),
+      delta * 4
+    )
+
+    if (towerRef.current) {
+      towerRef.current.scale.y = currentHeight.current
+      towerRef.current.position.y = currentHeight.current / 2
+
+      // Breathing effect for towers
       if (probability > 0.01) {
-        const pulse = 1 + Math.sin(Date.now() * 0.003 + index) * 0.02
-        meshRef.current.scale.x = barWidth * pulse
-        meshRef.current.scale.z = barWidth * pulse
+        const breathe = 1 + Math.sin(time * 2 + index * 0.5) * 0.05
+        towerRef.current.scale.x = barWidth * breathe
+        towerRef.current.scale.z = barWidth * breathe
       }
+    }
+
+    // Animate outer glow
+    if (glowRef.current && probability > 0.05) {
+      const glowPulse = 1 + Math.sin(time * 3 + index) * 0.15
+      glowRef.current.scale.set(
+        barWidth * 1.5 * glowPulse,
+        currentHeight.current,
+        barWidth * 1.5 * glowPulse
+      )
+      glowRef.current.position.y = currentHeight.current / 2
+    }
+
+    // Animate energy rings
+    if (ringsRef.current && probability > 0.1) {
+      ringsRef.current.children.forEach((ring, i) => {
+        if (ring instanceof THREE.Mesh) {
+          const ringTime = (time * 0.5 + i * 0.33) % 1
+          const scale = ringTime * 2
+          ring.scale.setScalar(scale)
+          ring.position.y = ringTime * currentHeight.current
+          const material = ring.material as THREE.MeshBasicMaterial
+          material.opacity = (1 - ringTime) * 0.5 * probability
+        }
+      })
     }
   })
 
-  const color = phaseToColor(phase)
-  const emissiveIntensity = probability > 0.01 ? 0.3 : 0
+  const emissiveIntensity = probability > 0.01 ? 0.5 + probability * 0.5 : 0
 
   return (
-    <group position={position}>
-      {/* Base platform */}
+    <group position={position} ref={groupRef}>
+      {/* Base platform with glow */}
       <mesh position={[0, -0.05, 0]}>
-        <boxGeometry args={[barWidth * 1.2, 0.1, barWidth * 1.2]} />
+        <cylinderGeometry args={[barWidth * 0.7, barWidth * 0.8, 0.1, 32]} />
         <meshStandardMaterial
           color="#1e1b4b"
-          metalness={0.5}
-          roughness={0.5}
+          metalness={0.7}
+          roughness={0.3}
+          emissive={color}
+          emissiveIntensity={probability > 0.05 ? 0.2 : 0}
         />
       </mesh>
 
-      {/* Probability bar */}
-      <mesh ref={meshRef}>
-        <boxGeometry args={[1, 1, 1]} />
+      {/* Base ring glow */}
+      {probability > 0.05 && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+          <ringGeometry args={[barWidth * 0.6, barWidth * 1, 32]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={probability * 0.4}
+            blending={THREE.AdditiveBlending}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+
+      {/* Main probability tower (cylindrical) */}
+      <mesh ref={towerRef}>
+        <cylinderGeometry args={[barWidth * 0.4, barWidth * 0.5, 1, 32]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
           emissiveIntensity={emissiveIntensity}
-          metalness={0.3}
-          roughness={0.4}
+          metalness={0.4}
+          roughness={0.3}
           transparent
-          opacity={0.9}
+          opacity={0.95}
         />
       </mesh>
 
-      {/* Glow effect for high probability states */}
+      {/* Outer glow cylinder */}
+      {probability > 0.05 && (
+        <mesh ref={glowRef}>
+          <cylinderGeometry args={[1, 1, 1, 32]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.15}
+            blending={THREE.AdditiveBlending}
+            side={THREE.BackSide}
+          />
+        </mesh>
+      )}
+
+      {/* Energy rings that travel up the tower */}
+      {probability > 0.1 && (
+        <group ref={ringsRef}>
+          {[0, 1, 2].map((i) => (
+            <mesh key={i} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[barWidth * 0.3, barWidth * 0.6, 32]} />
+              <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={0.3}
+                blending={THREE.AdditiveBlending}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+          ))}
+        </group>
+      )}
+
+      {/* Top glow sphere */}
+      {probability > 0.05 && (
+        <TopGlowOrb
+          probability={probability}
+          color={color}
+          height={currentHeight.current}
+          index={index}
+        />
+      )}
+
+      {/* Point light for scene illumination */}
       {probability > 0.1 && (
         <pointLight
-          position={[0, currentHeight.current, 0]}
+          position={[0, Math.max(currentHeight.current, 0.5), 0]}
           color={color}
-          intensity={probability * 2}
-          distance={3}
+          intensity={probability * 4}
+          distance={5}
+          decay={2}
         />
       )}
 
       {/* State label */}
       <Html position={[0, -0.4, 0]} center>
-        <div className="text-center">
-          <div className="font-mono text-xs text-white bg-slate-900/80 px-2 py-0.5 rounded whitespace-nowrap">
+        <div className="text-center pointer-events-none">
+          <div
+            className="font-mono text-xs text-white px-2 py-0.5 rounded-lg whitespace-nowrap backdrop-blur-sm"
+            style={{
+              background: `linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,27,75,0.9))`,
+              border: `1px solid ${colorString}40`
+            }}
+          >
             |{state}⟩
           </div>
         </div>
       </Html>
 
-      {/* Probability label (only show if > 0) */}
+      {/* Probability percentage */}
       {probability > 0.01 && (
-        <Html position={[0, Math.max(probability * maxHeight, 0.3) + 0.3, 0]} center>
-          <div className="font-mono text-xs text-cyan-400 bg-slate-900/80 px-1.5 py-0.5 rounded">
+        <Html position={[0, Math.max(probability * maxHeight, 0.3) + 0.5, 0]} center>
+          <div
+            className="font-mono text-sm font-bold px-2 py-1 rounded-lg pointer-events-none"
+            style={{
+              color: colorString,
+              background: 'rgba(15,23,42,0.85)',
+              border: `1px solid ${colorString}50`,
+              textShadow: `0 0 10px ${colorString}`
+            }}
+          >
             {(probability * 100).toFixed(1)}%
           </div>
         </Html>
@@ -121,29 +233,302 @@ function ProbabilityBar({
   )
 }
 
-// Phase wheel legend
-function PhaseLegend({ position }: { position: [number, number, number] }) {
-  const segments = 12
-  const radius = 0.5
+// Glowing orb at the top of towers
+function TopGlowOrb({
+  probability,
+  color,
+  height,
+  index
+}: {
+  probability: number
+  color: THREE.Color
+  height: number
+  index: number
+}) {
+  const orbRef = useRef<THREE.Mesh>(null)
+  const outerRef = useRef<THREE.Mesh>(null)
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime
+
+    if (orbRef.current) {
+      const pulse = 1 + Math.sin(time * 4 + index) * 0.2
+      orbRef.current.scale.setScalar(pulse)
+      orbRef.current.position.y = height + 0.2
+    }
+
+    if (outerRef.current) {
+      const outerPulse = 1 + Math.sin(time * 3 + index + Math.PI) * 0.3
+      outerRef.current.scale.setScalar(outerPulse)
+      outerRef.current.position.y = height + 0.2
+    }
+  })
+
+  const size = 0.1 + probability * 0.15
 
   return (
-    <group position={position}>
+    <group>
+      {/* Core orb */}
+      <mesh ref={orbRef} position={[0, height + 0.2, 0]}>
+        <sphereGeometry args={[size, 16, 16]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={2}
+          transparent
+          opacity={0.95}
+        />
+      </mesh>
+
+      {/* Outer glow */}
+      <mesh ref={outerRef} position={[0, height + 0.2, 0]}>
+        <sphereGeometry args={[size * 2, 16, 16]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.2}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+// Ground interference pattern
+function InterferenceGround({
+  size,
+  probabilities
+}: {
+  size: number
+  probabilities: { state: string; probability: number; phase?: number }[]
+}) {
+  const meshRef = useRef<THREE.Mesh>(null)
+  const resolution = 64
+
+  const geometry = useMemo(() => {
+    return new THREE.PlaneGeometry(size, size, resolution, resolution)
+  }, [size])
+
+  useFrame((state) => {
+    if (!meshRef.current) return
+
+    const time = state.clock.elapsedTime
+    const positions = geometry.attributes.position.array as Float32Array
+
+    // Create interference pattern based on probability positions
+    const n = probabilities.length
+    const gridSize = Math.ceil(Math.sqrt(n))
+
+    for (let i = 0; i < positions.length / 3; i++) {
+      const x = positions[i * 3]
+      const z = positions[i * 3 + 1] // Note: Y and Z swapped for plane
+
+      let waveSum = 0
+
+      for (let p = 0; p < n; p++) {
+        const prob = probabilities[p]
+        if (prob.probability < 0.05) continue
+
+        const spacing = size / (gridSize + 1)
+        const px = ((p % gridSize) - gridSize / 2 + 0.5) * spacing * 1.4
+        const pz = (Math.floor(p / gridSize) - gridSize / 2 + 0.5) * spacing * 1.4
+
+        const dist = Math.sqrt((x - px) ** 2 + (z - pz) ** 2)
+        const phase = prob.phase || 0
+
+        // Wave emanating from each probability center
+        waveSum += Math.sin(dist * 3 - time * 2 + phase) * prob.probability * Math.exp(-dist * 0.3)
+      }
+
+      positions[i * 3 + 2] = waveSum * 0.15
+    }
+
+    geometry.attributes.position.needsUpdate = true
+    geometry.computeVertexNormals()
+  })
+
+  return (
+    <mesh ref={meshRef} geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.15, 0]}>
+      <meshStandardMaterial
+        color="#1e1b4b"
+        metalness={0.8}
+        roughness={0.2}
+        emissive="#4338ca"
+        emissiveIntensity={0.15}
+        wireframe={false}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  )
+}
+
+// Ambient particles rising from the ground
+function RisingParticles({
+  probabilities,
+  size,
+  count = 100
+}: {
+  probabilities: { state: string; probability: number; phase?: number }[]
+  size: number
+  count?: number
+}) {
+  const pointsRef = useRef<THREE.Points>(null)
+
+  const { positions, colors, velocities } = useMemo(() => {
+    const pos = new Float32Array(count * 3)
+    const col = new Float32Array(count * 3)
+    const vel = new Float32Array(count)
+
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * size
+      pos[i * 3 + 1] = Math.random() * 4
+      pos[i * 3 + 2] = (Math.random() - 0.5) * size
+
+      col[i * 3] = 0.4 + Math.random() * 0.2
+      col[i * 3 + 1] = 0.3 + Math.random() * 0.4
+      col[i * 3 + 2] = 0.9 + Math.random() * 0.1
+
+      vel[i] = 0.3 + Math.random() * 0.5
+    }
+
+    return { positions: pos, colors: col, velocities: vel }
+  }, [count, size])
+
+  useFrame((state, delta) => {
+    if (!pointsRef.current) return
+
+    const posAttr = pointsRef.current.geometry.attributes.position.array as Float32Array
+    const colAttr = pointsRef.current.geometry.attributes.color.array as Float32Array
+    const time = state.clock.elapsedTime
+
+    const n = probabilities.length
+    const gridSize = Math.ceil(Math.sqrt(n))
+    const spacing = size / (gridSize + 1)
+
+    for (let i = 0; i < count; i++) {
+      // Move particles up
+      posAttr[i * 3 + 1] += velocities[i] * delta
+
+      // Slight horizontal wave motion
+      posAttr[i * 3] += Math.sin(time + i * 0.1) * 0.005
+      posAttr[i * 3 + 2] += Math.cos(time + i * 0.1) * 0.005
+
+      // Attract to high probability regions
+      for (let p = 0; p < n; p++) {
+        const prob = probabilities[p]
+        if (prob.probability < 0.1) continue
+
+        const px = ((p % gridSize) - gridSize / 2 + 0.5) * spacing * 1.4
+        const pz = (Math.floor(p / gridSize) - gridSize / 2 + 0.5) * spacing * 1.4
+
+        const dx = px - posAttr[i * 3]
+        const dz = pz - posAttr[i * 3 + 2]
+        const dist = Math.sqrt(dx * dx + dz * dz)
+
+        if (dist < 2) {
+          const force = prob.probability * 0.3 / (dist + 0.5)
+          posAttr[i * 3] += dx * force * delta
+          posAttr[i * 3 + 2] += dz * force * delta
+
+          // Color based on phase
+          const hue = ((prob.phase || 0) / (2 * Math.PI))
+          const targetColor = new THREE.Color().setHSL(hue, 0.8, 0.6)
+          colAttr[i * 3] = THREE.MathUtils.lerp(colAttr[i * 3], targetColor.r, 0.1)
+          colAttr[i * 3 + 1] = THREE.MathUtils.lerp(colAttr[i * 3 + 1], targetColor.g, 0.1)
+          colAttr[i * 3 + 2] = THREE.MathUtils.lerp(colAttr[i * 3 + 2], targetColor.b, 0.1)
+        }
+      }
+
+      // Reset particles that go too high
+      if (posAttr[i * 3 + 1] > 5) {
+        posAttr[i * 3] = (Math.random() - 0.5) * size
+        posAttr[i * 3 + 1] = 0
+        posAttr[i * 3 + 2] = (Math.random() - 0.5) * size
+
+        // Reset color
+        colAttr[i * 3] = 0.4 + Math.random() * 0.2
+        colAttr[i * 3 + 1] = 0.3 + Math.random() * 0.4
+        colAttr[i * 3 + 2] = 0.9
+      }
+    }
+
+    pointsRef.current.geometry.attributes.position.needsUpdate = true
+    pointsRef.current.geometry.attributes.color.needsUpdate = true
+  })
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          args={[positions, 3]}
+        />
+        <bufferAttribute
+          attach="attributes-color"
+          args={[colors, 3]}
+        />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.06}
+        vertexColors
+        transparent
+        opacity={0.7}
+        sizeAttenuation
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </points>
+  )
+}
+
+// Enhanced phase wheel legend
+function PhaseLegend3D({ position }: { position: [number, number, number] }) {
+  const groupRef = useRef<THREE.Group>(null)
+  const segments = 16
+
+  useFrame((state) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = state.clock.elapsedTime * 0.3
+    }
+  })
+
+  return (
+    <group position={position} ref={groupRef}>
+      {/* Outer ring of color spheres */}
       {Array.from({ length: segments }, (_, i) => {
         const angle = (i / segments) * Math.PI * 2
+        const radius = 0.6
         const x = Math.cos(angle) * radius
         const z = Math.sin(angle) * radius
         const color = phaseToColor(angle)
 
         return (
-          <mesh key={i} position={[x, 0, z]}>
-            <sphereGeometry args={[0.08, 16, 16]} />
-            <meshBasicMaterial color={color} />
-          </mesh>
+          <group key={i}>
+            <mesh position={[x, 0, z]}>
+              <sphereGeometry args={[0.08, 12, 12]} />
+              <meshStandardMaterial
+                color={color}
+                emissive={color}
+                emissiveIntensity={0.5}
+              />
+            </mesh>
+          </group>
         )
       })}
 
-      <Html position={[0, 0.4, 0]} center>
-        <div className="text-xs text-gray-400 bg-slate-900/80 px-2 py-1 rounded">
+      {/* Central connecting ring */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.5, 0.55, 32]} />
+        <meshBasicMaterial
+          color="#6366f1"
+          transparent
+          opacity={0.3}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      <Html position={[0, 0.5, 0]} center>
+        <div className="text-xs text-gray-300 bg-slate-900/90 px-2 py-1 rounded-lg border border-indigo-500/30">
           Phase
         </div>
       </Html>
@@ -157,6 +542,7 @@ export default function ProbabilityLandscape({
   maxHeight = 3,
   barWidth = 0.6,
   spacing = 1.2,
+  enhanced = true,
 }: ProbabilityLandscapeProps) {
   // Calculate grid layout
   const layout = useMemo(() => {
@@ -179,22 +565,33 @@ export default function ProbabilityLandscape({
     return { positions, cols, rows, totalWidth, totalDepth }
   }, [probabilities.length, spacing])
 
+  const gridSize = Math.max(layout.totalWidth, layout.totalDepth) + spacing * 3
+
   return (
     <group position={position}>
-      {/* Ground grid */}
+      {/* Interference pattern ground */}
+      {enhanced && (
+        <InterferenceGround size={gridSize} probabilities={probabilities} />
+      )}
+
+      {/* Base grid */}
       <gridHelper
-        args={[
-          Math.max(layout.totalWidth, layout.totalDepth) + spacing * 2,
-          Math.max(layout.cols, layout.rows) + 2,
-          '#6366f1',
-          '#312e81',
-        ]}
-        position={[0, -0.1, 0]}
+        args={[gridSize, Math.max(layout.cols, layout.rows) + 4, '#6366f1', '#312e81']}
+        position={[0, -0.12, 0]}
       />
 
-      {/* Probability bars */}
+      {/* Rising ambient particles */}
+      {enhanced && (
+        <RisingParticles
+          probabilities={probabilities}
+          size={gridSize}
+          count={80}
+        />
+      )}
+
+      {/* Probability towers */}
       {probabilities.map((prob, i) => (
-        <ProbabilityBar
+        <ProbabilityTower
           key={prob.state}
           state={prob.state}
           probability={prob.probability}
@@ -206,19 +603,26 @@ export default function ProbabilityLandscape({
         />
       ))}
 
-      {/* Phase legend */}
-      <PhaseLegend
+      {/* Phase color legend */}
+      <PhaseLegend3D
         position={[
-          layout.totalWidth / 2 + spacing * 1.5,
-          0,
+          layout.totalWidth / 2 + spacing * 2,
+          0.5,
           layout.totalDepth / 2 + spacing,
         ]}
       />
 
       {/* Title */}
-      <Html position={[0, maxHeight + 1, 0]} center>
-        <div className="text-white font-bold text-lg bg-slate-900/80 px-4 py-2 rounded-lg">
-          Probability Landscape
+      <Html position={[0, maxHeight + 1.5, 0]} center>
+        <div className="text-white font-bold text-xl bg-gradient-to-r from-indigo-900/90 to-purple-900/90 px-6 py-3 rounded-xl border border-indigo-500/40 backdrop-blur-sm shadow-lg shadow-indigo-500/20">
+          Probability Amplitude Landscape
+        </div>
+      </Html>
+
+      {/* Explanation */}
+      <Html position={[0, -0.8, layout.totalDepth / 2 + spacing * 1.5]} center>
+        <div className="text-gray-300 text-sm bg-slate-900/90 px-4 py-2 rounded-lg border border-slate-700/50 max-w-md text-center">
+          Tower height = measurement probability | Color = quantum phase angle
         </div>
       </Html>
     </group>
