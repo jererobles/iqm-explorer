@@ -8,39 +8,181 @@ interface EntanglementLinesProps {
   entanglements: [number, number][]
 }
 
-// Particle that travels along the entanglement line
-function EntanglementParticle({
-  start,
-  end,
-  speed = 1,
-  delay = 0,
+// Energy particle flowing along the connection
+function EnergyParticle({
+  curve,
+  speed,
+  offset,
+  color,
+  size = 0.08,
 }: {
-  start: THREE.Vector3
-  end: THREE.Vector3
-  speed?: number
-  delay?: number
+  curve: THREE.CatmullRomCurve3
+  speed: number
+  offset: number
+  color: string
+  size?: number
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
-  const progress = useRef(delay)
+  const glowRef = useRef<THREE.Mesh>(null)
+  const progress = useRef(offset)
 
   useFrame((_, delta) => {
     if (!meshRef.current) return
 
-    progress.current += delta * speed
-    const t = (Math.sin(progress.current) + 1) / 2 // Oscillate between 0 and 1
+    progress.current = (progress.current + delta * speed) % 1
 
-    // Lerp position
-    meshRef.current.position.lerpVectors(start, end, t)
+    // Get position along curve
+    const point = curve.getPoint(progress.current)
+    meshRef.current.position.copy(point)
+    if (glowRef.current) glowRef.current.position.copy(point)
 
     // Pulse scale
-    const scale = 0.08 + Math.sin(progress.current * 3) * 0.03
-    meshRef.current.scale.setScalar(scale)
+    const pulse = 1 + Math.sin(progress.current * Math.PI * 4) * 0.3
+    meshRef.current.scale.setScalar(size * pulse)
+    if (glowRef.current) glowRef.current.scale.setScalar(size * 2.5 * pulse)
   })
 
   return (
-    <mesh ref={meshRef}>
-      <sphereGeometry args={[1, 16, 16]} />
-      <meshBasicMaterial color="#ec4899" transparent opacity={0.8} />
+    <>
+      <mesh ref={meshRef}>
+        <sphereGeometry args={[1, 12, 12]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
+      <mesh ref={glowRef}>
+        <sphereGeometry args={[1, 12, 12]} />
+        <meshBasicMaterial color={color} transparent opacity={0.4} />
+      </mesh>
+    </>
+  )
+}
+
+// Helix strand wrapping around the connection
+function HelixStrand({
+  curve,
+  turns,
+  radius,
+  offset,
+  color,
+  opacity = 0.6,
+}: {
+  curve: THREE.CatmullRomCurve3
+  turns: number
+  radius: number
+  offset: number
+  color: string
+  opacity?: number
+}) {
+  const points = useMemo(() => {
+    const pts: THREE.Vector3[] = []
+    const segments = 100
+
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments
+      const point = curve.getPoint(t)
+
+      // Get curve tangent and create perpendicular vectors
+      const tangent = curve.getTangent(t)
+      const up = new THREE.Vector3(0, 1, 0)
+      const right = new THREE.Vector3().crossVectors(tangent, up).normalize()
+      const perpUp = new THREE.Vector3().crossVectors(right, tangent).normalize()
+
+      // Spiral around the curve
+      const angle = t * Math.PI * 2 * turns + offset
+      const helixOffset = right.clone().multiplyScalar(Math.cos(angle) * radius)
+        .add(perpUp.clone().multiplyScalar(Math.sin(angle) * radius))
+
+      pts.push(point.clone().add(helixOffset))
+    }
+    return pts
+  }, [curve, turns, radius, offset])
+
+  return (
+    <Line
+      points={points}
+      color={color}
+      transparent
+      opacity={opacity}
+      lineWidth={1.5}
+    />
+  )
+}
+
+// Glowing tube connecting the qubits
+function EnergyTube({
+  curve,
+  radius,
+  color,
+}: {
+  curve: THREE.CatmullRomCurve3
+  radius: number
+  color: string
+}) {
+  const meshRef = useRef<THREE.Mesh>(null)
+  const glowRef = useRef<THREE.Mesh>(null)
+  const pulseRef = useRef(0)
+
+  useFrame((state) => {
+    pulseRef.current = state.clock.elapsedTime
+    if (meshRef.current) {
+      const mat = meshRef.current.material as THREE.MeshBasicMaterial
+      mat.opacity = 0.3 + Math.sin(pulseRef.current * 3) * 0.15
+    }
+    if (glowRef.current) {
+      const mat = glowRef.current.material as THREE.MeshBasicMaterial
+      mat.opacity = 0.15 + Math.sin(pulseRef.current * 3) * 0.1
+    }
+  })
+
+  const tubeGeometry = useMemo(() => {
+    return new THREE.TubeGeometry(curve, 64, radius, 8, false)
+  }, [curve, radius])
+
+  const glowGeometry = useMemo(() => {
+    return new THREE.TubeGeometry(curve, 64, radius * 2.5, 8, false)
+  }, [curve, radius])
+
+  return (
+    <>
+      {/* Inner core */}
+      <mesh ref={meshRef} geometry={tubeGeometry}>
+        <meshBasicMaterial color={color} transparent opacity={0.4} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Outer glow */}
+      <mesh ref={glowRef} geometry={glowGeometry}>
+        <meshBasicMaterial color={color} transparent opacity={0.15} side={THREE.DoubleSide} />
+      </mesh>
+    </>
+  )
+}
+
+// Pulsing ring at connection points
+function ConnectionRing({
+  position,
+  color,
+}: {
+  position: THREE.Vector3
+  color: string
+}) {
+  const ringRef = useRef<THREE.Mesh>(null)
+  const pulseRef = useRef(0)
+
+  useFrame((state) => {
+    if (!ringRef.current) return
+    pulseRef.current = state.clock.elapsedTime
+
+    // Pulsing scale
+    const scale = 1 + Math.sin(pulseRef.current * 4) * 0.2
+    ringRef.current.scale.setScalar(scale)
+
+    // Rotate slowly
+    ringRef.current.rotation.x = pulseRef.current * 0.5
+    ringRef.current.rotation.y = pulseRef.current * 0.3
+  })
+
+  return (
+    <mesh ref={ringRef} position={position}>
+      <torusGeometry args={[0.3, 0.05, 8, 24]} />
+      <meshBasicMaterial color={color} transparent opacity={0.6} />
     </mesh>
   )
 }
@@ -55,53 +197,90 @@ function EntanglementConnection({
   end: [number, number, number]
   index: number
 }) {
-  const glowOpacity = useRef(0.3)
-
-  // Calculate midpoint for curved line (arc upward)
   const startVec = useMemo(() => new THREE.Vector3(...start), [start])
   const endVec = useMemo(() => new THREE.Vector3(...end), [end])
 
-  // Generate curve points
-  const curvePoints = useMemo(() => {
+  // Create a smooth curve between the two points
+  const curve = useMemo(() => {
+    const distance = startVec.distanceTo(endVec)
     const midpoint = startVec.clone().add(endVec).multiplyScalar(0.5)
-    midpoint.y += 1.5 // Arc upward
-    const curve = new THREE.QuadraticBezierCurve3(startVec, midpoint, endVec)
-    return curve.getPoints(50)
+
+    // Calculate control points for a nice curved path
+    const direction = endVec.clone().sub(startVec).normalize()
+    const perpendicular = new THREE.Vector3(-direction.z, 0.5, direction.x).normalize()
+
+    // Create gentle S-curve
+    const ctrl1 = startVec.clone().lerp(midpoint, 0.3).add(perpendicular.clone().multiplyScalar(distance * 0.15))
+    const ctrl2 = midpoint.clone().add(new THREE.Vector3(0, distance * 0.1, 0))
+    const ctrl3 = endVec.clone().lerp(midpoint, 0.3).add(perpendicular.clone().multiplyScalar(-distance * 0.15))
+
+    return new THREE.CatmullRomCurve3([startVec, ctrl1, ctrl2, ctrl3, endVec])
   }, [startVec, endVec])
 
-  // Animate glow
-  useFrame((state) => {
-    glowOpacity.current = 0.3 + Math.sin(state.clock.elapsedTime * 2 + index) * 0.2
-  })
+  const particleColors = ['#f472b6', '#ec4899', '#db2777', '#be185d']
 
   return (
     <group>
-      {/* Main entanglement line */}
-      <Line
-        points={curvePoints}
-        color="#ec4899"
-        lineWidth={2}
-        transparent
-        opacity={0.8}
-        dashed
-        dashSize={0.2}
-        gapSize={0.1}
-      />
+      {/* Main energy tube */}
+      <EnergyTube curve={curve} radius={0.04} color="#ec4899" />
 
-      {/* Glow line */}
-      <Line
-        points={curvePoints}
-        color="#f472b6"
-        lineWidth={6}
-        transparent
-        opacity={0.3}
-      />
+      {/* Double helix strands */}
+      <HelixStrand curve={curve} turns={4} radius={0.15} offset={0} color="#f472b6" opacity={0.5} />
+      <HelixStrand curve={curve} turns={4} radius={0.15} offset={Math.PI} color="#a855f7" opacity={0.5} />
 
-      {/* Traveling particles */}
-      <EntanglementParticle start={startVec} end={endVec} speed={1.5} delay={0} />
-      <EntanglementParticle start={endVec} end={startVec} speed={1.5} delay={Math.PI} />
-      <EntanglementParticle start={startVec} end={endVec} speed={2} delay={Math.PI / 2} />
+      {/* Flowing energy particles - multiple at different speeds and offsets */}
+      {[0, 0.2, 0.4, 0.6, 0.8].map((offset, i) => (
+        <EnergyParticle
+          key={`forward-${i}`}
+          curve={curve}
+          speed={0.4 + i * 0.1}
+          offset={offset}
+          color={particleColors[i % particleColors.length]}
+          size={0.06 + (i % 2) * 0.02}
+        />
+      ))}
+
+      {/* Connection rings at endpoints */}
+      <ConnectionRing position={startVec} color="#ec4899" />
+      <ConnectionRing position={endVec} color="#a855f7" />
+
+      {/* Central glow pulse */}
+      <CentralPulse curve={curve} color="#f472b6" index={index} />
     </group>
+  )
+}
+
+// Pulsing glow at the center of the connection
+function CentralPulse({
+  curve,
+  color,
+  index,
+}: {
+  curve: THREE.CatmullRomCurve3
+  color: string
+  index: number
+}) {
+  const meshRef = useRef<THREE.Mesh>(null)
+  const center = useMemo(() => curve.getPoint(0.5), [curve])
+
+  useFrame((state) => {
+    if (!meshRef.current) return
+    const t = state.clock.elapsedTime + index * Math.PI
+
+    // Pulsing scale
+    const scale = 0.1 + Math.sin(t * 2) * 0.05
+    meshRef.current.scale.setScalar(scale)
+
+    // Pulsing opacity
+    const mat = meshRef.current.material as THREE.MeshBasicMaterial
+    mat.opacity = 0.3 + Math.sin(t * 3) * 0.2
+  })
+
+  return (
+    <mesh ref={meshRef} position={center}>
+      <sphereGeometry args={[1, 16, 16]} />
+      <meshBasicMaterial color={color} transparent opacity={0.4} />
+    </mesh>
   )
 }
 
