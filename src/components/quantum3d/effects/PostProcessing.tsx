@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   EffectComposer,
   Bloom,
@@ -8,7 +8,7 @@ import {
   HueSaturation,
 } from '@react-three/postprocessing'
 import { BlendFunction, KernelSize } from 'postprocessing'
-import * as THREE from 'three'
+import { Vector2 } from 'three'
 
 interface QuantumPostProcessingProps {
   bloomIntensity?: number
@@ -27,6 +27,12 @@ export function QuantumPostProcessing({
   noiseIntensity = 0.05,
   saturation = 0.1,
 }: QuantumPostProcessingProps) {
+  // Memoize Vector2 to prevent recreation on every render
+  const chromaticOffset = useMemo(
+    () => new Vector2(chromaticAberration, chromaticAberration),
+    [chromaticAberration]
+  )
+
   return (
     <EffectComposer multisampling={4}>
       {/* Bloom for glowing effects */}
@@ -40,7 +46,7 @@ export function QuantumPostProcessing({
 
       {/* Chromatic aberration for sci-fi look */}
       <ChromaticAberration
-        offset={new THREE.Vector2(chromaticAberration, chromaticAberration)}
+        offset={chromaticOffset}
         blendFunction={BlendFunction.NORMAL}
         radialModulation={true}
         modulationOffset={0.5}
@@ -106,8 +112,6 @@ export function AdaptiveQuantumEffects({
   isEntangled?: boolean
   isSuperposition?: boolean
 }) {
-  const bloomRef = useRef<any>(null)
-
   // Adjust bloom based on quantum state
   const bloomIntensity = useMemo(() => {
     let base = 1.0
@@ -116,16 +120,16 @@ export function AdaptiveQuantumEffects({
     return base * quantumIntensity + 0.8
   }, [quantumIntensity, isEntangled, isSuperposition])
 
-  const chromaticOffset = useMemo(() => {
+  // Memoize Vector2 to prevent recreation on every render
+  const chromaticOffsetVec = useMemo(() => {
     let base = 0.001
     if (isEntangled) base += 0.002
-    return base
+    return new Vector2(base, base)
   }, [isEntangled])
 
   return (
     <EffectComposer multisampling={4}>
       <Bloom
-        ref={bloomRef}
         intensity={bloomIntensity}
         luminanceThreshold={0.35}
         luminanceSmoothing={0.9}
@@ -134,7 +138,7 @@ export function AdaptiveQuantumEffects({
       />
 
       <ChromaticAberration
-        offset={new THREE.Vector2(chromaticOffset, chromaticOffset)}
+        offset={chromaticOffsetVec}
         blendFunction={BlendFunction.NORMAL}
         radialModulation={true}
         modulationOffset={0.5}

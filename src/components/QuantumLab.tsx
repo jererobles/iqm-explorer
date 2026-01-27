@@ -1210,7 +1210,13 @@ export default function QuantumLab() {
             {/* 3D Canvas */}
             <div className="flex-1 relative bg-gray-900">
               <Suspense fallback={<Loader3D />}>
-                <Canvas>
+                <Canvas
+                  gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+                  onCreated={({ gl }) => {
+                    gl.setClearColor('#111827')
+                  }}
+                  fallback={<Loader3D />}
+                >
                   <VisualizationScene
                     qubitStates={currentState.qubitStates}
                     entanglements={currentState.entanglements}
