@@ -251,6 +251,21 @@ function parseCode(code: string): { numQubits: number; operations: GateOperation
       })
       return
     }
+
+    // Measurement - measure_all() measures all qubits at once
+    const measureAllMatch = trimmed.match(/\.measure_all\s*\(\s*\)/i)
+    if (measureAllMatch) {
+      // Create a single measurement operation that includes all qubits
+      const allQubits = Array.from({ length: numQubits }, (_, i) => i)
+      operations.push({
+        id: `mall-${lineNumber}`,
+        gate: 'M',
+        qubits: allQubits,
+        lineNumber,
+        code: trimmed,
+      })
+      return
+    }
   })
 
   return { numQubits, operations, shots }
@@ -291,27 +306,29 @@ function calculateSteps(numQubits: number, operations: GateOperation[]): Circuit
     const newEntanglements = [...currentEntanglements]
 
     if (op.gate === 'M') {
-      // Measurement: collapse qubit to |0⟩ or |1⟩ based on probability
-      const qubit = op.qubits[0]
-      if (qubit < numQubits) {
-        const state = currentQubitStates[qubit]
-        // Probability of measuring |1⟩
-        const prob1 = Math.sin(state.theta / 2) ** 2
-        // For visualization, collapse based on probability threshold
-        // Use deterministic collapse: if prob > 0.5, collapse to |1⟩
-        // In real simulation, this would be random
-        if (prob1 > 0.5) {
-          newQubitStates[qubit] = { theta: Math.PI, phi: 0 } // |1⟩ state
-        } else {
-          newQubitStates[qubit] = { theta: 0, phi: 0 } // |0⟩ state
+      // Measurement: collapse qubit(s) to |0⟩ or |1⟩ based on probability
+      // Supports both single qubit measurement and measure_all (multiple qubits)
+      for (const qubit of op.qubits) {
+        if (qubit < numQubits) {
+          const state = currentQubitStates[qubit]
+          // Probability of measuring |1⟩
+          const prob1 = Math.sin(state.theta / 2) ** 2
+          // For visualization, collapse based on probability threshold
+          // Use deterministic collapse: if prob > 0.5, collapse to |1⟩
+          // In real simulation, this would be random
+          if (prob1 > 0.5) {
+            newQubitStates[qubit] = { theta: Math.PI, phi: 0 } // |1⟩ state
+          } else {
+            newQubitStates[qubit] = { theta: 0, phi: 0 } // |0⟩ state
+          }
+          // Measurement breaks entanglement
+          const qubitIdx = qubit
+          const filteredEntanglements = newEntanglements.filter(
+            ([a, b]) => a !== qubitIdx && b !== qubitIdx
+          )
+          newEntanglements.length = 0
+          newEntanglements.push(...filteredEntanglements)
         }
-        // Measurement breaks entanglement
-        const qubitIdx = qubit
-        const filteredEntanglements = newEntanglements.filter(
-          ([a, b]) => a !== qubitIdx && b !== qubitIdx
-        )
-        newEntanglements.length = 0
-        newEntanglements.push(...filteredEntanglements)
       }
     } else if (op.gate in GATE_TRANSFORMS && op.qubits.length === 1) {
       const qubit = op.qubits[0]
