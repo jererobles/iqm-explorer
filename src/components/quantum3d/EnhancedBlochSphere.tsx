@@ -1,6 +1,6 @@
 import { useRef, useMemo, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Sphere, Line, Html, Trail, Float } from '@react-three/drei'
+import { Sphere, Line, Html, Float } from '@react-three/drei'
 import { useSpring, animated } from '@react-spring/three'
 import * as THREE from 'three'
 
@@ -226,23 +226,27 @@ function StateVectorWithTrail({
         opacity={0.3}
       />
 
-      {/* State orb with trail */}
-      <Trail
-        width={0.5}
-        length={8}
-        color={isEntangled ? '#ec4899' : '#22d3ee'}
-        attenuation={(t) => t * t}
-      >
-        <animated.mesh ref={orbRef} position={position as any}>
-          {/* Core */}
-          <sphereGeometry args={[0.12, 32, 32]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            emissive={isEntangled ? '#ec4899' : '#22d3ee'}
-            emissiveIntensity={2}
-          />
-        </animated.mesh>
-      </Trail>
+      {/* State orb - core with glow */}
+      <animated.mesh ref={orbRef} position={position as any}>
+        {/* Core */}
+        <sphereGeometry args={[0.12, 32, 32]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          emissive={isEntangled ? '#ec4899' : '#22d3ee'}
+          emissiveIntensity={2}
+        />
+      </animated.mesh>
+
+      {/* Inner glow ring for trail-like effect */}
+      <animated.mesh position={position as any}>
+        <sphereGeometry args={[0.15, 16, 16]} />
+        <meshBasicMaterial
+          color={isEntangled ? '#ec4899' : '#22d3ee'}
+          transparent
+          opacity={0.6}
+          blending={THREE.AdditiveBlending}
+        />
+      </animated.mesh>
 
       {/* Outer glow layers */}
       <animated.mesh position={position as any}>
