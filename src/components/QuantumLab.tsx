@@ -381,6 +381,7 @@ function CircuitDiagram({
   onStepClick,
   onAddGate,
   onRemoveGate,
+  onGateHover,
 }: {
   operations: GateOperation[]
   numQubits: number
@@ -388,6 +389,7 @@ function CircuitDiagram({
   onStepClick: (step: number) => void
   onAddGate: (gate: string, qubit: number, targetQubit?: number) => void
   onRemoveGate: (operationId: string) => void
+  onGateHover?: (gate: string | null) => void
 }) {
   const [selectedGate, setSelectedGate] = useState<string | null>(null)
   const [hoveredGate, setHoveredGate] = useState<string | null>(null)
@@ -430,6 +432,8 @@ function CircuitDiagram({
             <motion.button
               key={gate}
               onClick={() => setSelectedGate(selectedGate === gate ? null : gate)}
+              onMouseEnter={() => onGateHover?.(gate)}
+              onMouseLeave={() => onGateHover?.(null)}
               className={`px-2.5 py-1.5 rounded text-xs font-bold text-white transition-all ${
                 selectedGate === gate ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-900' : ''
               }`}
@@ -687,6 +691,7 @@ export default function QuantumLab() {
   const [mode, setMode] = useState<'simulation' | 'iqm'>('simulation')
   const [viewMode, setViewMode] = useState<ViewMode>('bloch')
   const [showExamples, setShowExamples] = useState(false)
+  const [hoveredGate, setHoveredGate] = useState<string | null>(null)
   const [iqmResults, setIqmResults] = useState<Record<string, number> | null>(null)
   const [iqmStatus, setIqmStatus] = useState('')
   const [isRunningIqm, setIsRunningIqm] = useState(false)
@@ -934,10 +939,10 @@ export default function QuantumLab() {
         </motion.div>
       )}
 
-      {/* Main layout: Left column (editor + circuit) | Right column (viz + scrubber) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left Column - 1/3 width */}
-        <div className="lg:col-span-1 flex flex-col gap-4">
+      {/* Main layout: Left column (editor + circuit) 40% | Right column (viz + scrubber) 60% */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Left Column - 40% width (2/5) */}
+        <div className="lg:col-span-2 flex flex-col gap-4">
           {/* Code Editor */}
           <div className="glass-card overflow-hidden flex flex-col" style={{ height: '280px' }}>
             <div className="flex items-center justify-between p-2 border-b border-gray-700/50">
@@ -990,12 +995,13 @@ export default function QuantumLab() {
               onStepClick={setCurrentStep}
               onAddGate={handleAddGate}
               onRemoveGate={handleRemoveGate}
+              onGateHover={setHoveredGate}
             />
           </div>
         </div>
 
-        {/* Right Column - 2/3 width */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
+        {/* Right Column - 60% width (3/5) */}
+        <div className="lg:col-span-3 flex flex-col gap-4">
           {/* 3D Visualization */}
           <div className="glass-card overflow-hidden flex flex-col" style={{ height: '380px' }}>
             {/* Header with view mode selector */}
@@ -1055,9 +1061,27 @@ export default function QuantumLab() {
                 </Canvas>
               </Suspense>
             </div>
-            {/* Tooltip bar at bottom of viz */}
-            <div className="p-2 border-t border-gray-700/50 bg-gray-800/50">
-              {currentStep > 0 && currentStep <= operations.length ? (
+            {/* Tooltip bar at bottom of viz - shows hovered gate or current step */}
+            <div className="p-2 border-t border-gray-700/50 bg-gray-800/50 min-h-[36px]">
+              {hoveredGate && GATE_INFO[hoveredGate] ? (
+                <div className="flex items-center gap-3">
+                  <span
+                    className="px-2 py-0.5 rounded text-xs font-bold text-white"
+                    style={{ backgroundColor: GATE_INFO[hoveredGate]?.color }}
+                  >
+                    {hoveredGate}
+                  </span>
+                  <span className="text-xs text-cyan-400 font-medium">
+                    {GATE_INFO[hoveredGate]?.name}
+                  </span>
+                  <span className="text-xs text-gray-400 flex-1">
+                    {GATE_INFO[hoveredGate]?.description}
+                  </span>
+                  <span className="text-xs text-gray-500 italic">
+                    {GATE_INFO[hoveredGate]?.physicalMeaning}
+                  </span>
+                </div>
+              ) : currentStep > 0 && currentStep <= operations.length ? (
                 <div className="flex items-center gap-3">
                   <span
                     className="px-2 py-0.5 rounded text-xs font-bold text-white"
