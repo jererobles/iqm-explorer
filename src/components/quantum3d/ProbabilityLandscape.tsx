@@ -1,6 +1,5 @@
 import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface ProbabilityLandscapeProps {
@@ -12,20 +11,14 @@ interface ProbabilityLandscapeProps {
   enhanced?: boolean
 }
 
-// Phase to color conversion
+// Phase to color conversion - higher saturation for better contrast
 function phaseToColor(phase: number): THREE.Color {
   const hue = (phase / (2 * Math.PI))
-  return new THREE.Color().setHSL(hue, 0.85, 0.55)
-}
-
-function phaseToColorString(phase: number): string {
-  const hue = (phase / (2 * Math.PI)) * 360
-  return `hsl(${hue}, 85%, 55%)`
+  return new THREE.Color().setHSL(hue, 0.9, 0.6)
 }
 
 // Enhanced probability tower with glow effects
 function ProbabilityTower({
-  state,
   probability,
   phase = 0,
   position,
@@ -33,7 +26,6 @@ function ProbabilityTower({
   barWidth,
   index,
 }: {
-  state: string
   probability: number
   phase?: number
   position: [number, number, number]
@@ -49,7 +41,6 @@ function ProbabilityTower({
   const currentHeight = useRef(0.01)
 
   const color = useMemo(() => phaseToColor(phase), [phase])
-  const colorString = useMemo(() => phaseToColorString(phase), [phase])
 
   // Animate tower
   useFrame((state, delta) => {
@@ -192,42 +183,10 @@ function ProbabilityTower({
         <pointLight
           position={[0, Math.max(currentHeight.current, 0.5), 0]}
           color={color}
-          intensity={probability * 4}
-          distance={5}
+          intensity={probability * 6}
+          distance={6}
           decay={2}
         />
-      )}
-
-      {/* State label */}
-      <Html position={[0, -0.4, 0]} center>
-        <div className="text-center pointer-events-none">
-          <div
-            className="font-mono text-xs text-white px-2 py-0.5 rounded-lg whitespace-nowrap backdrop-blur-sm"
-            style={{
-              background: `linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,27,75,0.9))`,
-              border: `1px solid ${colorString}40`
-            }}
-          >
-            |{state}⟩
-          </div>
-        </div>
-      </Html>
-
-      {/* Probability percentage */}
-      {probability > 0.01 && (
-        <Html position={[0, Math.max(probability * maxHeight, 0.3) + 0.5, 0]} center>
-          <div
-            className="font-mono text-sm font-bold px-2 py-1 rounded-lg pointer-events-none"
-            style={{
-              color: colorString,
-              background: 'rgba(15,23,42,0.85)',
-              border: `1px solid ${colorString}50`,
-              textShadow: `0 0 10px ${colorString}`
-            }}
-          >
-            {(probability * 100).toFixed(1)}%
-          </div>
-        </Html>
       )}
     </group>
   )
@@ -481,61 +440,6 @@ function RisingParticles({
   )
 }
 
-// Enhanced phase wheel legend
-function PhaseLegend3D({ position }: { position: [number, number, number] }) {
-  const groupRef = useRef<THREE.Group>(null)
-  const segments = 16
-
-  useFrame((state) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y = state.clock.elapsedTime * 0.3
-    }
-  })
-
-  return (
-    <group position={position} ref={groupRef}>
-      {/* Outer ring of color spheres */}
-      {Array.from({ length: segments }, (_, i) => {
-        const angle = (i / segments) * Math.PI * 2
-        const radius = 0.6
-        const x = Math.cos(angle) * radius
-        const z = Math.sin(angle) * radius
-        const color = phaseToColor(angle)
-
-        return (
-          <group key={i}>
-            <mesh position={[x, 0, z]}>
-              <sphereGeometry args={[0.08, 12, 12]} />
-              <meshStandardMaterial
-                color={color}
-                emissive={color}
-                emissiveIntensity={0.5}
-              />
-            </mesh>
-          </group>
-        )
-      })}
-
-      {/* Central connecting ring */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.5, 0.55, 32]} />
-        <meshBasicMaterial
-          color="#6366f1"
-          transparent
-          opacity={0.3}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      <Html position={[0, 0.5, 0]} center>
-        <div className="text-xs text-gray-300 bg-slate-900/90 px-2 py-1 rounded-lg border border-indigo-500/30">
-          Phase
-        </div>
-      </Html>
-    </group>
-  )
-}
-
 export default function ProbabilityLandscape({
   probabilities,
   position = [0, 0, 0],
@@ -593,7 +497,6 @@ export default function ProbabilityLandscape({
       {probabilities.map((prob, i) => (
         <ProbabilityTower
           key={prob.state}
-          state={prob.state}
           probability={prob.probability}
           phase={prob.phase}
           position={layout.positions[i]}
@@ -602,29 +505,6 @@ export default function ProbabilityLandscape({
           index={i}
         />
       ))}
-
-      {/* Phase color legend */}
-      <PhaseLegend3D
-        position={[
-          layout.totalWidth / 2 + spacing * 2,
-          0.5,
-          layout.totalDepth / 2 + spacing,
-        ]}
-      />
-
-      {/* Title */}
-      <Html position={[0, maxHeight + 1.5, 0]} center>
-        <div className="text-white font-bold text-xl bg-gradient-to-r from-indigo-900/90 to-purple-900/90 px-6 py-3 rounded-xl border border-indigo-500/40 backdrop-blur-sm shadow-lg shadow-indigo-500/20">
-          Probability Amplitude Landscape
-        </div>
-      </Html>
-
-      {/* Explanation */}
-      <Html position={[0, -0.8, layout.totalDepth / 2 + spacing * 1.5]} center>
-        <div className="text-gray-300 text-sm bg-slate-900/90 px-4 py-2 rounded-lg border border-slate-700/50 max-w-md text-center">
-          Tower height = measurement probability | Color = quantum phase angle
-        </div>
-      </Html>
     </group>
   )
 }
