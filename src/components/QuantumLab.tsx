@@ -15,10 +15,18 @@ import {
   RotateCcw,
   Info,
   Zap,
+  Box,
+  Waves,
+  Circle,
+  BarChart3,
 } from 'lucide-react'
 import { useQuantum, GateOperation } from '../context/QuantumContext'
 import BlochSphere3D from './quantum3d/BlochSphere3D'
 import EntanglementLines from './quantum3d/EntanglementLines'
+import ProbabilityLandscape from './quantum3d/ProbabilityLandscape'
+import AmplitudeWave3D from './quantum3d/AmplitudeWave3D'
+import AmplitudeRing from './quantum3d/AmplitudeRing'
+import QuantumParticleField from './quantum3d/QuantumParticleField'
 import {
   iqmApi,
   IQMConfig,
@@ -26,6 +34,8 @@ import {
   loadConfig,
 } from '../services/iqmApi'
 import { getMeasurementCounts } from '../services/simulator'
+
+type ViewMode = 'bloch' | 'towers' | 'wave' | 'ring'
 
 // Gate colors and info for tooltips - ENHANCED with pedagogic content
 const GATE_INFO: Record<string, {
@@ -124,6 +134,14 @@ const GATE_INFO: Record<string, {
     physicalMeaning: 'Adjusts phase without changing measurement probabilities',
     example: 'Phase control in quantum Fourier transform'
   },
+  M: {
+    color: '#64748b',
+    name: 'Measure',
+    description: 'Collapses superposition to classical state',
+    matrix: 'Projection onto |0⟩⟨0| or |1⟩⟨1|',
+    physicalMeaning: 'Observes the qubit, collapsing its quantum state to a definite classical value (0 or 1)',
+    example: 'Final step to extract classical information from quantum computation'
+  },
 }
 
 // Step explanation generator for pedagogic content
@@ -180,6 +198,10 @@ function getStepExplanation(gate: string, qubits: number[], stepIndex: number, t
     RZ: {
       blochEffect: 'Adjusts phase angle around the Z-axis',
       quantumConcept: 'PHASE CONTROL: Key for interference effects'
+    },
+    M: {
+      blochEffect: 'Collapses to either |0⟩ (north pole) or |1⟩ (south pole) based on probabilities',
+      quantumConcept: 'MEASUREMENT: The quantum state collapses - superposition ends, classical result appears!'
     },
   }
 
@@ -258,15 +280,19 @@ shots = 1024
   },
 ]
 
-// 3D Scene content for visualization
+// 3D Scene content for visualization with multiple view modes
 function VisualizationScene({
   qubitStates,
   entanglements,
   numQubits,
+  viewMode,
+  probabilities,
 }: {
   qubitStates: { theta: number; phi: number }[]
   entanglements: [number, number][]
   numQubits: number
+  viewMode: ViewMode
+  probabilities: { state: string; probability: number; phase?: number }[]
 }) {
   const positions = useMemo(() => {
     if (numQubits === 1) {
@@ -284,28 +310,142 @@ function VisualizationScene({
     })
   }, [numQubits, qubitStates])
 
-  return (
+  // Calculate attractors for particle field from probabilities
+  const attractors = useMemo(() => {
+    const n = probabilities.length
+    if (n === 0) return []
+    const gridSize = Math.ceil(Math.sqrt(n))
+    const cellSize = 6 / gridSize
+
+    return probabilities
+      .filter(p => p.probability > 0.1)
+      .map((prob) => {
+        const idx = probabilities.indexOf(prob)
+        return {
+          position: [
+            ((idx % gridSize) - gridSize / 2 + 0.5) * cellSize,
+            prob.probability * 2 + 0.5,
+            (Math.floor(idx / gridSize) - gridSize / 2 + 0.5) * cellSize
+          ] as [number, number, number],
+          strength: prob.probability * 2,
+          color: `hsl(${((prob.phase || 0) / (2 * Math.PI)) * 360}, 85%, 55%)`
+        }
+      })
+  }, [probabilities])
+
+  // Common lighting setup
+  const Lighting = () => (
     <>
-      <PerspectiveCamera makeDefault position={[0, 3, numQubits > 2 ? 10 : 8]} fov={50} />
       <ambientLight intensity={0.4} />
       <pointLight position={[10, 10, 10]} intensity={1} color="#6366f1" />
       <pointLight position={[-10, -10, -10]} intensity={0.5} color="#8b5cf6" />
-      <Stars radius={100} depth={50} count={1000} factor={4} fade speed={1} />
-
-      {qubitStates.map((state, i) => (
-        <BlochSphere3D
-          key={i}
-          state={{ ...state, label: `Q${i}` }}
-          position={positions[i]}
-          radius={1}
-          isEntangled={entanglements.some(([a, b]) => a === i || b === i)}
-        />
-      ))}
-
-      <EntanglementLines positions={positions} entanglements={entanglements} />
-      <OrbitControls enablePan enableZoom enableRotate minDistance={4} maxDistance={20} />
     </>
   )
+
+  if (viewMode === 'bloch') {
+    return (
+      <>
+        <PerspectiveCamera makeDefault position={[0, 3, numQubits > 2 ? 10 : 8]} fov={50} />
+        <Lighting />
+        <Stars radius={100} depth={50} count={1000} factor={4} fade speed={1} />
+
+        {qubitStates.map((state, i) => (
+          <BlochSphere3D
+            key={i}
+            state={{ ...state, label: `Q${i}` }}
+            position={positions[i]}
+            radius={1}
+            isEntangled={entanglements.some(([a, b]) => a === i || b === i)}
+          />
+        ))}
+
+        <EntanglementLines positions={positions} entanglements={entanglements} />
+        <OrbitControls enablePan enableZoom enableRotate minDistance={4} maxDistance={20} />
+      </>
+    )
+  }
+
+  if (viewMode === 'towers') {
+    return (
+      <>
+        <PerspectiveCamera makeDefault position={[5, 5, 5]} fov={50} />
+        <Lighting />
+        <Stars radius={100} depth={50} count={1500} factor={4} fade speed={0.5} />
+
+        <ProbabilityLandscape
+          probabilities={probabilities}
+          position={[0, 0, 0]}
+          maxHeight={3}
+          barWidth={0.5}
+          spacing={1.2}
+          enhanced={true}
+        />
+
+        <OrbitControls enablePan enableZoom enableRotate minDistance={4} maxDistance={20} />
+      </>
+    )
+  }
+
+  if (viewMode === 'wave') {
+    return (
+      <>
+        <PerspectiveCamera makeDefault position={[6, 6, 6]} fov={50} />
+        <Lighting />
+        <pointLight position={[0, 15, 0]} intensity={1} color="#06b6d4" />
+        <Stars radius={100} depth={50} count={2000} factor={5} fade speed={0.8} />
+
+        <AmplitudeWave3D
+          probabilities={probabilities}
+          position={[0, 0, 0]}
+          size={6}
+          resolution={48}
+        />
+
+        <QuantumParticleField
+          count={200}
+          radius={5}
+          height={4}
+          color="#06b6d4"
+          speed={0.8}
+          spiralIntensity={0.2}
+          probabilityAttractors={attractors}
+        />
+
+        <OrbitControls enablePan enableZoom enableRotate minDistance={5} maxDistance={20} />
+      </>
+    )
+  }
+
+  if (viewMode === 'ring') {
+    return (
+      <>
+        <PerspectiveCamera makeDefault position={[0, 5, 7]} fov={50} />
+        <Lighting />
+        <pointLight position={[0, 12, 0]} intensity={0.8} color="#8b5cf6" />
+        <Stars radius={100} depth={50} count={1800} factor={4} fade speed={0.6} />
+
+        <AmplitudeRing
+          probabilities={probabilities}
+          position={[0, 0, 0]}
+          radius={3}
+          height={2.5}
+        />
+
+        <QuantumParticleField
+          count={150}
+          radius={4}
+          height={3}
+          color="#8b5cf6"
+          speed={0.6}
+          spiralIntensity={0.3}
+        />
+
+        <OrbitControls enablePan enableZoom enableRotate minDistance={4} maxDistance={18} />
+      </>
+    )
+  }
+
+  return null
 }
 
 // Circuit diagram component
@@ -621,6 +761,7 @@ export default function QuantumLab() {
   } = useQuantum()
 
   const [mode, setMode] = useState<'simulation' | 'iqm'>('simulation')
+  const [viewMode, setViewMode] = useState<ViewMode>('bloch')
   const [showExamples, setShowExamples] = useState(false)
   const [iqmResults, setIqmResults] = useState<Record<string, number> | null>(null)
   const [iqmStatus, setIqmStatus] = useState('')
@@ -646,6 +787,42 @@ export default function QuantumLab() {
       entanglements: [],
     }
   }, [currentStep, steps, numQubits])
+
+  // Probabilities with phase info for amplitude visualizations
+  const probabilitiesWithPhase = useMemo(() => {
+    if (!currentState.probabilities || currentState.probabilities.length === 0) {
+      // Generate default probabilities based on qubit states
+      const n = numQubits
+      const numStates = Math.pow(2, n)
+      const probs: { state: string; probability: number; phase: number }[] = []
+
+      for (let i = 0; i < numStates; i++) {
+        const binaryStr = i.toString(2).padStart(n, '0')
+        let probability = 1
+
+        for (let q = 0; q < n; q++) {
+          const bit = parseInt(binaryStr[q])
+          const state = currentState.qubitStates[q] || { theta: 0, phi: 0 }
+          const alpha = Math.cos(state.theta / 2)
+          const beta = Math.sin(state.theta / 2)
+
+          probability *= (bit === 0) ? alpha * alpha : beta * beta
+        }
+
+        // Calculate phase from first qubit's phi for now
+        const phase = currentState.qubitStates[0]?.phi || 0
+
+        probs.push({ state: binaryStr, probability, phase })
+      }
+
+      return probs
+    }
+
+    return currentState.probabilities.map((p, i) => ({
+      ...p,
+      phase: (currentState.qubitStates[0]?.phi || 0) + (i * Math.PI / 4) // Add variety to phases
+    }))
+  }, [currentState, numQubits])
 
   // Handle editor mount
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -896,7 +1073,46 @@ export default function QuantumLab() {
                 {numQubits} qubit{numQubits > 1 ? 's' : ''}
               </span>
             </div>
-            <span className="text-xs text-gray-500">Step {currentStep}/{steps.length - 1}</span>
+            {/* View mode selector */}
+            <div className="flex items-center gap-1">
+              <motion.button
+                onClick={() => setViewMode('bloch')}
+                className={`p-1.5 rounded ${viewMode === 'bloch' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Bloch Sphere View"
+              >
+                <Box className="w-3.5 h-3.5" />
+              </motion.button>
+              <motion.button
+                onClick={() => setViewMode('towers')}
+                className={`p-1.5 rounded ${viewMode === 'towers' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Probability Towers"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+              </motion.button>
+              <motion.button
+                onClick={() => setViewMode('wave')}
+                className={`p-1.5 rounded ${viewMode === 'wave' ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Amplitude Wave"
+              >
+                <Waves className="w-3.5 h-3.5" />
+              </motion.button>
+              <motion.button
+                onClick={() => setViewMode('ring')}
+                className={`p-1.5 rounded ${viewMode === 'ring' ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Amplitude Ring"
+              >
+                <Circle className="w-3.5 h-3.5" />
+              </motion.button>
+              <span className="text-xs text-gray-500 ml-2">Step {currentStep}/{steps.length - 1}</span>
+            </div>
           </div>
           <div className="flex-1 relative bg-gray-900">
             <Suspense fallback={<Loader3D />}>
@@ -905,6 +1121,8 @@ export default function QuantumLab() {
                   qubitStates={currentState.qubitStates}
                   entanglements={currentState.entanglements}
                   numQubits={numQubits}
+                  viewMode={viewMode}
+                  probabilities={probabilitiesWithPhase}
                 />
               </Canvas>
             </Suspense>
