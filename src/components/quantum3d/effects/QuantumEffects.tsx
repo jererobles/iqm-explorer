@@ -299,27 +299,33 @@ function VortexParticles({
   intensity: number
 }) {
   const pointsRef = useRef<THREE.Points>(null)
+  const dataRef = useRef<Float32Array | null>(null)
 
-  const { positions, colors, data } = useMemo(() => {
-    const pos = new Float32Array(count * 3)
-    const col = new Float32Array(count * 3)
+  // Initialize geometry with useMemo
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry()
+    const positions = new Float32Array(count * 3)
+    const colors = new Float32Array(count * 3)
     const particleData = new Float32Array(count * 4) // radius, angle, speed, phase
 
+    const safeInnerRadius = Math.max(0.1, innerRadius)
+    const safeOuterRadius = Math.max(safeInnerRadius + 0.1, outerRadius)
+
     for (let i = 0; i < count; i++) {
-      const radius = innerRadius + Math.random() * (outerRadius - innerRadius)
+      const radius = safeInnerRadius + Math.random() * (safeOuterRadius - safeInnerRadius)
       const angle = Math.random() * Math.PI * 2
       const z = (Math.random() - 0.5) * 2
 
-      pos[i * 3] = Math.cos(angle) * radius
-      pos[i * 3 + 1] = Math.sin(angle) * radius
-      pos[i * 3 + 2] = z
+      positions[i * 3] = Math.cos(angle) * radius
+      positions[i * 3 + 1] = Math.sin(angle) * radius
+      positions[i * 3 + 2] = z
 
       // Purple-cyan gradient
       const hue = 0.7 + Math.random() * 0.3
       const color = new THREE.Color().setHSL(hue, 0.9, 0.6)
-      col[i * 3] = color.r
-      col[i * 3 + 1] = color.g
-      col[i * 3 + 2] = color.b
+      colors[i * 3] = color.r
+      colors[i * 3 + 1] = color.g
+      colors[i * 3 + 2] = color.b
 
       particleData[i * 4] = radius
       particleData[i * 4 + 1] = angle
@@ -327,14 +333,22 @@ function VortexParticles({
       particleData[i * 4 + 3] = Math.random() * Math.PI * 2
     }
 
-    return { positions: pos, colors: col, data: particleData }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    dataRef.current = particleData
+
+    return geo
   }, [count, innerRadius, outerRadius])
 
   useFrame((state, delta) => {
-    if (!pointsRef.current) return
+    if (!pointsRef.current || !dataRef.current) return
 
-    const posAttr = pointsRef.current.geometry.attributes.position.array as Float32Array
+    const posAttr = pointsRef.current.geometry.attributes.position
+    const posArray = posAttr.array as Float32Array
+    const data = dataRef.current
     const time = state.clock.elapsedTime
+    const safeInnerRadius = Math.max(0.1, innerRadius)
+    const safeOuterRadius = Math.max(safeInnerRadius + 0.1, outerRadius)
 
     for (let i = 0; i < count; i++) {
       // Update angle (spiral inward)
@@ -343,29 +357,25 @@ function VortexParticles({
       // Gradually decrease radius
       data[i * 4] -= delta * 0.3 * data[i * 4 + 2]
 
-      const radius = data[i * 4]
+      const radius = Math.max(0, data[i * 4])
       const angle = data[i * 4 + 1]
 
-      posAttr[i * 3] = Math.cos(angle) * radius
-      posAttr[i * 3 + 1] = Math.sin(angle) * radius
-      posAttr[i * 3 + 2] = Math.sin(time + data[i * 4 + 3]) * 0.5
+      posArray[i * 3] = Math.cos(angle) * radius
+      posArray[i * 3 + 1] = Math.sin(angle) * radius
+      posArray[i * 3 + 2] = Math.sin(time + data[i * 4 + 3]) * 0.5
 
       // Reset particles that reach center
-      if (radius < innerRadius * 0.8) {
-        data[i * 4] = outerRadius * (0.8 + Math.random() * 0.2)
+      if (radius < safeInnerRadius * 0.8) {
+        data[i * 4] = safeOuterRadius * (0.8 + Math.random() * 0.2)
         data[i * 4 + 1] = Math.random() * Math.PI * 2
       }
     }
 
-    pointsRef.current.geometry.attributes.position.needsUpdate = true
+    posAttr.needsUpdate = true
   })
 
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
-      </bufferGeometry>
+    <points ref={pointsRef} geometry={geometry}>
       <pointsMaterial
         size={0.08}
         vertexColors
@@ -431,7 +441,7 @@ export function EnergyWaveRipple({
   )
 }
 
-// Floating holographic grid
+// Floating holographic grid - simplified version using gridHelper
 export function HolographicGrid({
   position = [0, -2, 0] as [number, number, number],
   size = 20,
@@ -445,70 +455,33 @@ export function HolographicGrid({
   color1?: string
   color2?: string
 }) {
-  const linesRef = useRef<THREE.Group>(null)
-
-  const { lines } = useMemo(() => {
-    const lineArray: { start: THREE.Vector3; end: THREE.Vector3; isHorizontal: boolean }[] = []
-    const halfSize = size / 2
-    const step = size / divisions
-
-    // Horizontal lines
-    for (let i = 0; i <= divisions; i++) {
-      const z = -halfSize + i * step
-      lineArray.push({
-        start: new THREE.Vector3(-halfSize, 0, z),
-        end: new THREE.Vector3(halfSize, 0, z),
-        isHorizontal: true,
-      })
-    }
-
-    // Vertical lines
-    for (let i = 0; i <= divisions; i++) {
-      const x = -halfSize + i * step
-      lineArray.push({
-        start: new THREE.Vector3(x, 0, -halfSize),
-        end: new THREE.Vector3(x, 0, halfSize),
-        isHorizontal: false,
-      })
-    }
-
-    return { lines: lineArray }
-  }, [size, divisions])
+  const gridRef = useRef<THREE.GridHelper>(null)
 
   useFrame((state) => {
-    if (!linesRef.current) return
+    if (!gridRef.current) return
     const time = state.clock.elapsedTime
-
-    linesRef.current.children.forEach((child, i) => {
-      if (child instanceof THREE.Line) {
-        const material = child.material as THREE.LineBasicMaterial
-        const wave = Math.sin(time * 2 + i * 0.2) * 0.5 + 0.5
-        material.opacity = 0.2 + wave * 0.3
-      }
-    })
+    const material = gridRef.current.material as THREE.Material
+    if (material && 'opacity' in material) {
+      (material as THREE.MeshBasicMaterial).opacity = 0.25 + Math.sin(time * 0.5) * 0.1
+    }
   })
 
   return (
-    <group ref={linesRef} position={position}>
-      {lines.map((line, i) => (
-        <line key={i}>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              args={[new Float32Array([
-                line.start.x, line.start.y, line.start.z,
-                line.end.x, line.end.y, line.end.z,
-              ]), 3]}
-            />
-          </bufferGeometry>
-          <lineBasicMaterial
-            color={line.isHorizontal ? color1 : color2}
-            transparent
-            opacity={0.3}
-            blending={THREE.AdditiveBlending}
-          />
-        </line>
-      ))}
+    <group position={position}>
+      <gridHelper
+        ref={gridRef}
+        args={[size, divisions, color1, color2]}
+      />
+      {/* Add subtle glow plane underneath */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+        <planeGeometry args={[size * 0.8, size * 0.8]} />
+        <meshBasicMaterial
+          color={color1}
+          transparent
+          opacity={0.05}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
     </group>
   )
 }
