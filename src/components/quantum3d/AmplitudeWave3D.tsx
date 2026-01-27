@@ -1,6 +1,5 @@
 import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface AmplitudeWave3DProps {
@@ -204,9 +203,9 @@ function AmplitudePeaks({
               <meshStandardMaterial
                 color={color}
                 emissive={color}
-                emissiveIntensity={1.5}
+                emissiveIntensity={2}
                 transparent
-                opacity={0.9}
+                opacity={0.95}
               />
             </mesh>
 
@@ -216,30 +215,18 @@ function AmplitudePeaks({
               <meshBasicMaterial
                 color={color}
                 transparent
-                opacity={0.3}
+                opacity={0.4}
+                blending={THREE.AdditiveBlending}
               />
             </mesh>
 
             {/* Point light for dramatic effect */}
             <pointLight
               color={color}
-              intensity={peak.probability * 3}
-              distance={4}
+              intensity={peak.probability * 5}
+              distance={5}
               decay={2}
             />
-
-            {/* Label */}
-            {peak.probability > 0.05 && (
-              <Html position={[0, 0.6, 0]} center>
-                <div className="text-center pointer-events-none">
-                  <div className="font-mono text-xs text-white bg-slate-900/80 px-2 py-1 rounded-lg border border-white/20 backdrop-blur-sm">
-                    |{peak.state}⟩
-                    <br />
-                    <span className="text-cyan-400">{(peak.probability * 100).toFixed(1)}%</span>
-                  </div>
-                </div>
-              </Html>
-            )}
           </group>
         )
       })}
@@ -465,54 +452,6 @@ function QuantumDust({
   )
 }
 
-// Phase color legend
-function PhaseLegend3D({ position }: { position: [number, number, number] }) {
-  const ringRef = useRef<THREE.Group>(null)
-
-  useFrame((state) => {
-    if (ringRef.current) {
-      ringRef.current.rotation.y = state.clock.elapsedTime * 0.2
-    }
-  })
-
-  const segments = 24
-
-  return (
-    <group position={position} ref={ringRef}>
-      {Array.from({ length: segments }, (_, idx) => {
-        const angle = (idx / segments) * Math.PI * 2
-        const radius = 0.8
-
-        const [r, g, b] = phaseToRGB(angle)
-        const color = new THREE.Color(r, g, b)
-
-        const x = Math.cos(angle) * radius
-        const z = Math.sin(angle) * radius
-
-        return (
-          <group key={idx}>
-            <mesh position={[x, 0, z]}>
-              <sphereGeometry args={[0.08, 8, 8]} />
-              <meshStandardMaterial
-                color={color}
-                emissive={color}
-                emissiveIntensity={0.5}
-              />
-            </mesh>
-          </group>
-        )
-      })}
-
-      {/* Center label */}
-      <Html position={[0, 0.5, 0]} center>
-        <div className="text-xs text-gray-300 bg-slate-900/80 px-2 py-1 rounded whitespace-nowrap">
-          Phase Color Wheel
-        </div>
-      </Html>
-    </group>
-  )
-}
-
 export default function AmplitudeWave3D({
   probabilities,
   position = [0, 0, 0],
@@ -536,23 +475,6 @@ export default function AmplitudeWave3D({
 
       {/* Floating particles */}
       <QuantumDust probabilities={probabilities} size={size} count={150} />
-
-      {/* Phase legend */}
-      <PhaseLegend3D position={[size / 2 + 1.5, 0.5, size / 2 - 1]} />
-
-      {/* Title */}
-      <Html position={[0, 4, 0]} center>
-        <div className="text-white font-bold text-xl bg-gradient-to-r from-purple-900/80 to-indigo-900/80 px-6 py-3 rounded-xl border border-purple-500/30 backdrop-blur-sm">
-          Quantum Amplitude Landscape
-        </div>
-      </Html>
-
-      {/* Description */}
-      <Html position={[0, -0.5, size / 2 + 1]} center>
-        <div className="text-gray-300 text-sm bg-slate-900/80 px-4 py-2 rounded-lg max-w-md text-center">
-          Wave height = probability amplitude | Colors = quantum phase | Particles flow toward high-probability states
-        </div>
-      </Html>
     </group>
   )
 }

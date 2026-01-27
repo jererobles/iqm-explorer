@@ -1,6 +1,6 @@
 import { useRef, useMemo, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Html, Line } from '@react-three/drei'
+import { Line } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface AmplitudeRingProps {
@@ -153,38 +153,14 @@ function AmplitudePillars({
                 <meshBasicMaterial
                   color={color}
                   transparent
-                  opacity={0.2}
+                  opacity={0.3}
                   blending={THREE.AdditiveBlending}
                 />
               </mesh>
             )}
 
-            {/* State label */}
-            <Html position={[0, -0.3, 0.3]} center>
-              <div className="text-center pointer-events-none">
-                <div className="font-mono text-[10px] text-white bg-slate-900/80 px-1 py-0.5 rounded whitespace-nowrap">
-                  |{prob.state}⟩
-                </div>
-              </div>
-            </Html>
-
-            {/* Probability label */}
-            {prob.probability > 0.02 && (
-              <Html position={[0, prob.probability * maxHeight + 0.3, 0]} center>
-                <div
-                  className="font-mono text-xs font-bold px-1 py-0.5 rounded pointer-events-none"
-                  style={{
-                    color: `hsl(${(prob.phase || 0) / (2 * Math.PI) * 360}, 85%, 60%)`,
-                    background: 'rgba(15,23,42,0.85)',
-                  }}
-                >
-                  {(prob.probability * 100).toFixed(0)}%
-                </div>
-              </Html>
-            )}
-
             {/* Point light for high probability */}
-            {prob.probability > 0.15 && (
+            {prob.probability > 0.1 && (
               <pointLight
                 color={color}
                 intensity={prob.probability * 3}
@@ -489,27 +465,13 @@ export default function AmplitudeRing({
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
         <ringGeometry args={[radius - 0.1, radius + 0.1, 64]} />
         <meshBasicMaterial
-          color="#6366f1"
+          color="#8b5cf6"
           transparent
-          opacity={0.3}
+          opacity={0.5}
           blending={THREE.AdditiveBlending}
           side={THREE.DoubleSide}
         />
       </mesh>
-
-      {/* Title */}
-      <Html position={[0, height + 1, 0]} center>
-        <div className="text-white font-bold text-xl bg-gradient-to-r from-purple-900/90 to-cyan-900/90 px-6 py-3 rounded-xl border border-cyan-500/40 backdrop-blur-sm shadow-lg shadow-purple-500/20">
-          Amplitude Ring
-        </div>
-      </Html>
-
-      {/* Description */}
-      <Html position={[0, -0.8, radius + 1]} center>
-        <div className="text-gray-300 text-sm bg-slate-900/90 px-4 py-2 rounded-lg border border-slate-700/50 max-w-sm text-center">
-          Circular arrangement showing quantum state amplitudes | Height = probability | Color = phase
-        </div>
-      </Html>
     </group>
   )
 }
