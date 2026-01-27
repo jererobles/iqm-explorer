@@ -1,5 +1,6 @@
 import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface ProbabilityLandscapeProps {
@@ -19,6 +20,7 @@ function phaseToColor(phase: number): THREE.Color {
 
 // Enhanced probability tower with glow effects
 function ProbabilityTower({
+  state,
   probability,
   phase = 0,
   position,
@@ -26,6 +28,7 @@ function ProbabilityTower({
   barWidth,
   index,
 }: {
+  state: string
   probability: number
   phase?: number
   position: [number, number, number]
@@ -188,6 +191,13 @@ function ProbabilityTower({
           decay={2}
         />
       )}
+
+      {/* Minimal state label */}
+      <Html position={[0, -0.3, 0]} center style={{ pointerEvents: 'none' }}>
+        <div className="font-mono text-[10px] text-gray-300 bg-slate-900/80 px-1.5 py-0.5 rounded whitespace-nowrap">
+          |{state}⟩
+        </div>
+      </Html>
     </group>
   )
 }
@@ -497,6 +507,7 @@ export default function ProbabilityLandscape({
       {probabilities.map((prob, i) => (
         <ProbabilityTower
           key={prob.state}
+          state={prob.state}
           probability={prob.probability}
           phase={prob.phase}
           position={layout.positions[i]}

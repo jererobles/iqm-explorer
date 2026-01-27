@@ -934,298 +934,294 @@ export default function QuantumLab() {
         </motion.div>
       )}
 
-      {/* Top row: Code Editor (1/3) + 3D Visualization (2/3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ height: '420px' }}>
-        {/* Left: Code Editor - 1/3 width */}
-        <div className="glass-card overflow-hidden flex flex-col lg:col-span-1">
-          <div className="flex items-center justify-between p-2 border-b border-gray-700/50">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-              <span className="ml-2 text-xs text-gray-400">circuit.py</span>
+      {/* Main layout: Left column (editor + circuit) | Right column (viz + scrubber) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left Column - 1/3 width */}
+        <div className="lg:col-span-1 flex flex-col gap-4">
+          {/* Code Editor */}
+          <div className="glass-card overflow-hidden flex flex-col" style={{ height: '280px' }}>
+            <div className="flex items-center justify-between p-2 border-b border-gray-700/50">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                <span className="ml-2 text-xs text-gray-400">circuit.py</span>
+              </div>
+              <button
+                onClick={() => setCode(EXAMPLES[0].code)}
+                className="p-1 text-gray-400 hover:text-white rounded"
+                title="Reset to Bell State example"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button
-              onClick={() => setCode(EXAMPLES[0].code)}
-              className="p-1 text-gray-400 hover:text-white rounded"
-              title="Reset to Bell State example"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex-1 relative">
+              <Editor
+                height="100%"
+                defaultLanguage="python"
+                theme="vs-dark"
+                value={code}
+                onChange={(value) => setCode(value || '')}
+                onMount={handleEditorMount}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 12,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  padding: { top: 8 },
+                  tabSize: 2,
+                  wordWrap: 'on',
+                }}
+              />
+            </div>
           </div>
-          <div className="flex-1 relative">
-            <Editor
-              height="100%"
-              defaultLanguage="python"
-              theme="vs-dark"
-              value={code}
-              onChange={(value) => setCode(value || '')}
-              onMount={handleEditorMount}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 12,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                padding: { top: 8 },
-                tabSize: 2,
-                wordWrap: 'on',
-              }}
+
+          {/* Circuit Builder - under editor */}
+          <div className="glass-card overflow-hidden flex flex-col" style={{ height: '220px' }}>
+            <div className="flex items-center justify-between p-2 border-b border-gray-700/50">
+              <span className="text-xs font-medium text-white">Circuit Builder</span>
+              <span className="text-xs text-gray-500">{operations.length} gate{operations.length !== 1 ? 's' : ''}</span>
+            </div>
+            <CircuitDiagram
+              operations={operations}
+              numQubits={numQubits}
+              currentStep={currentStep}
+              onStepClick={setCurrentStep}
+              onAddGate={handleAddGate}
+              onRemoveGate={handleRemoveGate}
             />
           </div>
         </div>
 
-        {/* Right: 3D Visualization - 2/3 width */}
-        <div className="glass-card overflow-hidden flex flex-col lg:col-span-2">
-          {/* Header with view mode selector */}
-          <div className="flex items-center justify-between p-2 border-b border-gray-700/50">
-            <div className="flex items-center gap-3">
-              {/* View mode buttons */}
-              <div className="flex items-center gap-0.5 bg-gray-800/50 rounded-lg p-0.5">
-                <motion.button
-                  onClick={() => setViewMode('bloch')}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'bloch' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Bloch
-                </motion.button>
-                <motion.button
-                  onClick={() => setViewMode('towers')}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'towers' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Towers
-                </motion.button>
-                <motion.button
-                  onClick={() => setViewMode('wave')}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'wave' ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Wave
-                </motion.button>
-                <motion.button
-                  onClick={() => setViewMode('ring')}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'ring' ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Ring
-                </motion.button>
+        {/* Right Column - 2/3 width */}
+        <div className="lg:col-span-2 flex flex-col gap-4">
+          {/* 3D Visualization */}
+          <div className="glass-card overflow-hidden flex flex-col" style={{ height: '380px' }}>
+            {/* Header with view mode selector */}
+            <div className="flex items-center justify-between p-2 border-b border-gray-700/50">
+              <div className="flex items-center gap-3">
+                {/* View mode buttons */}
+                <div className="flex items-center gap-0.5 bg-gray-800/50 rounded-lg p-0.5">
+                  <motion.button
+                    onClick={() => setViewMode('bloch')}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'bloch' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Bloch
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setViewMode('towers')}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'towers' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Towers
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setViewMode('wave')}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'wave' ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Wave
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setViewMode('ring')}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'ring' ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Ring
+                  </motion.button>
+                </div>
+                <span className="text-xs text-gray-500">
+                  {numQubits}Q · Step {currentStep}/{steps.length - 1}
+                </span>
               </div>
-              <span className="text-xs text-gray-500">
-                {numQubits}Q · Step {currentStep}/{steps.length - 1}
-              </span>
             </div>
-            {/* Current gate info - moved to header */}
-            <div className="flex items-center gap-2">
+            {/* 3D Canvas */}
+            <div className="flex-1 relative bg-gray-900">
+              <Suspense fallback={<Loader3D />}>
+                <Canvas>
+                  <VisualizationScene
+                    qubitStates={currentState.qubitStates}
+                    entanglements={currentState.entanglements}
+                    numQubits={numQubits}
+                    viewMode={viewMode}
+                    probabilities={probabilitiesWithPhase}
+                  />
+                </Canvas>
+              </Suspense>
+            </div>
+            {/* Tooltip bar at bottom of viz */}
+            <div className="p-2 border-t border-gray-700/50 bg-gray-800/50">
               {currentStep > 0 && currentStep <= operations.length ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span
                     className="px-2 py-0.5 rounded text-xs font-bold text-white"
                     style={{ backgroundColor: GATE_INFO[operations[currentStep - 1]?.gate]?.color }}
                   >
                     {operations[currentStep - 1]?.gate}
                   </span>
-                  <span className="text-xs text-cyan-400">
+                  <span className="text-xs text-cyan-400 font-medium">
                     {GATE_INFO[operations[currentStep - 1]?.gate]?.name}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {GATE_INFO[operations[currentStep - 1]?.gate]?.description}
                   </span>
                 </div>
               ) : currentStep === 0 ? (
-                <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">
-                  Initial |0⟩ State
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-green-400 bg-green-500/20 px-2 py-0.5 rounded font-medium">|0⟩</span>
+                  <span className="text-xs text-gray-400">Initial state - all qubits start at ground state</span>
+                </div>
               ) : (
-                <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
-                  Final State
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded font-medium">Final</span>
+                  <span className="text-xs text-gray-400">Circuit complete - view measurement probabilities below</span>
+                </div>
               )}
             </div>
           </div>
-          {/* Clean 3D Canvas - no overlays */}
-          <div className="flex-1 relative bg-gray-900">
-            <Suspense fallback={<Loader3D />}>
-              <Canvas>
-                <VisualizationScene
-                  qubitStates={currentState.qubitStates}
-                  entanglements={currentState.entanglements}
-                  numQubits={numQubits}
-                  viewMode={viewMode}
-                  probabilities={probabilitiesWithPhase}
-                />
-              </Canvas>
-            </Suspense>
-          </div>
-        </div>
-      </div>
 
-      {/* Circuit Diagram - Full width below */}
-      <div className="glass-card overflow-hidden flex flex-col" style={{ height: '200px' }}>
-        <div className="flex items-center justify-between p-3 border-b border-gray-700/50">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-white">Circuit Builder</span>
-            <span className="text-xs text-gray-500">Click a gate above, then click a qubit wire to add it</span>
-          </div>
-          <span className="text-xs text-gray-500">{operations.length} gate{operations.length !== 1 ? 's' : ''}</span>
-        </div>
-        <CircuitDiagram
-          operations={operations}
-          numQubits={numQubits}
-          currentStep={currentStep}
-          onStepClick={setCurrentStep}
-          onAddGate={handleAddGate}
-          onRemoveGate={handleRemoveGate}
-        />
-      </div>
-
-      {/* Enhanced Timeline Scrubber with step explanations */}
-      <div className="glass-card p-4">
-        <div className="flex items-center gap-4 mb-3">
-          <div className="flex gap-1">
-            <motion.button
-              onClick={() => setCurrentStep(0)}
-              className="p-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              title="Go to initial state"
-            >
-              <SkipBack className="w-4 h-4" />
-            </motion.button>
-            <motion.button
-              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-              className="p-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              title="Previous step"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </motion.button>
-            <motion.button
-              onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
-              className="p-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              title="Next step"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </motion.button>
-            <motion.button
-              onClick={() => setCurrentStep(steps.length - 1)}
-              className="p-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              title="Go to final state"
-            >
-              <SkipForward className="w-4 h-4" />
-            </motion.button>
-          </div>
-
-          <div className="flex-1">
-            {/* Step indicators */}
-            <div className="flex items-center gap-1 mb-2">
-              <motion.button
-                onClick={() => setCurrentStep(0)}
-                className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                  currentStep === 0
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                }`}
-                whileHover={{ scale: 1.05 }}
-              >
-                |0⟩
-              </motion.button>
-              {operations.map((op, i) => (
+          {/* Timeline Scrubber - under viz */}
+          <div className="glass-card p-3" style={{ height: '120px' }}>
+            <div className="flex items-center gap-4">
+              <div className="flex gap-1">
                 <motion.button
-                  key={i}
-                  onClick={() => setCurrentStep(i + 1)}
-                  className={`px-2 py-1 rounded text-xs font-bold transition-all ${
-                    currentStep === i + 1
-                      ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-900 text-white'
-                      : currentStep > i + 1
-                      ? 'text-white opacity-80'
-                      : 'text-white opacity-40'
-                  }`}
-                  style={{ backgroundColor: GATE_INFO[op.gate]?.color || '#6366f1' }}
-                  whileHover={{ scale: 1.1 }}
-                  title={`${GATE_INFO[op.gate]?.name}: ${GATE_INFO[op.gate]?.description}`}
+                  onClick={() => setCurrentStep(0)}
+                  className="p-1.5 rounded-lg bg-gray-700 text-white hover:bg-gray-600"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Go to initial state"
                 >
-                  {op.gate}
+                  <SkipBack className="w-3.5 h-3.5" />
                 </motion.button>
-              ))}
-            </div>
-            {/* Slider */}
-            <input
-              type="range"
-              min={0}
-              max={steps.length - 1}
-              value={currentStep}
-              onChange={(e) => setCurrentStep(parseInt(e.target.value))}
-              className="w-full h-2 bg-gray-700 rounded-full appearance-none cursor-pointer
-                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-indigo-500/50"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Auto-simulation indicator for simulation mode */}
-            {mode === 'simulation' && (
-              <div className="flex items-center gap-2 text-sm">
-                {isSimulating ? (
-                  <span className="flex items-center gap-1.5 text-cyan-400">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Simulating...
-                  </span>
-                ) : measurementResults ? (
-                  <span className="flex items-center gap-1.5 text-green-400">
-                    <Zap className="w-4 h-4" />
-                    Auto-simulated
-                  </span>
-                ) : null}
+                <motion.button
+                  onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                  className="p-1.5 rounded-lg bg-gray-700 text-white hover:bg-gray-600"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Previous step"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </motion.button>
+                <motion.button
+                  onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
+                  className="p-1.5 rounded-lg bg-gray-700 text-white hover:bg-gray-600"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Next step"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </motion.button>
+                <motion.button
+                  onClick={() => setCurrentStep(steps.length - 1)}
+                  className="p-1.5 rounded-lg bg-gray-700 text-white hover:bg-gray-600"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Go to final state"
+                >
+                  <SkipForward className="w-3.5 h-3.5" />
+                </motion.button>
               </div>
-            )}
-            {/* Only show Run button for IQM mode - simulation is automatic */}
-            {mode === 'iqm' && (
-              <motion.button
-                onClick={runOnIqm}
-                disabled={isRunningIqm}
-                className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all ${
-                  isRunningIqm
-                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90'
-                }`}
-                whileHover={{ scale: isRunningIqm ? 1 : 1.02 }}
-                whileTap={{ scale: isRunningIqm ? 1 : 0.98 }}
-              >
-                {isRunningIqm ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Running on IQM...
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4" />
-                    Run on IQM
-                  </>
+
+              <div className="flex-1">
+                {/* Step indicators */}
+                <div className="flex items-center gap-1 mb-2 flex-wrap">
+                  <motion.button
+                    onClick={() => setCurrentStep(0)}
+                    className={`px-1.5 py-0.5 rounded text-xs font-medium transition-all ${
+                      currentStep === 0
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    |0⟩
+                  </motion.button>
+                  {operations.map((op, i) => (
+                    <motion.button
+                      key={i}
+                      onClick={() => setCurrentStep(i + 1)}
+                      className={`px-1.5 py-0.5 rounded text-xs font-bold transition-all ${
+                        currentStep === i + 1
+                          ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-900 text-white'
+                          : currentStep > i + 1
+                          ? 'text-white opacity-80'
+                          : 'text-white opacity-40'
+                      }`}
+                      style={{ backgroundColor: GATE_INFO[op.gate]?.color || '#6366f1' }}
+                      whileHover={{ scale: 1.1 }}
+                      title={`${GATE_INFO[op.gate]?.name}: ${GATE_INFO[op.gate]?.description}`}
+                    >
+                      {op.gate}
+                    </motion.button>
+                  ))}
+                </div>
+                {/* Slider */}
+                <input
+                  type="range"
+                  min={0}
+                  max={steps.length - 1}
+                  value={currentStep}
+                  onChange={(e) => setCurrentStep(parseInt(e.target.value))}
+                  className="w-full h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                    [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+                    [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-indigo-500/50"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Auto-simulation indicator for simulation mode */}
+                {mode === 'simulation' && (
+                  <div className="flex items-center gap-1.5 text-xs">
+                    {isSimulating ? (
+                      <span className="flex items-center gap-1 text-cyan-400">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Simulating
+                      </span>
+                    ) : measurementResults ? (
+                      <span className="flex items-center gap-1 text-green-400">
+                        <Zap className="w-3 h-3" />
+                        Ready
+                      </span>
+                    ) : null}
+                  </div>
                 )}
-              </motion.button>
-            )}
+                {/* Only show Run button for IQM mode */}
+                {mode === 'iqm' && (
+                  <motion.button
+                    onClick={runOnIqm}
+                    disabled={isRunningIqm}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                      isRunningIqm
+                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90'
+                    }`}
+                    whileHover={{ scale: isRunningIqm ? 1 : 1.02 }}
+                    whileTap={{ scale: isRunningIqm ? 1 : 0.98 }}
+                  >
+                    {isRunningIqm ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Running...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3 h-3" />
+                        Run on IQM
+                      </>
+                    )}
+                  </motion.button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Compact step info */}
-        {currentStep > 0 && currentStep <= operations.length && (
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-xs text-gray-400 flex items-center gap-2"
-          >
-            <span className="text-cyan-400">{GATE_INFO[operations[currentStep - 1]?.gate]?.description}</span>
-          </motion.div>
-        )}
       </div>
 
       {/* Results / IQM Config */}
