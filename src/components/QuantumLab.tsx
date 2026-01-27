@@ -17,12 +17,24 @@ import {
   Zap,
 } from 'lucide-react'
 import { useQuantum, GateOperation } from '../context/QuantumContext'
-import BlochSphere3D from './quantum3d/BlochSphere3D'
+import EnhancedBlochSphere from './quantum3d/EnhancedBlochSphere'
 import EntanglementLines from './quantum3d/EntanglementLines'
 import ProbabilityLandscape from './quantum3d/ProbabilityLandscape'
-import AmplitudeWave3D from './quantum3d/AmplitudeWave3D'
+import EnhancedAmplitudeWave from './quantum3d/EnhancedAmplitudeWave'
 import AmplitudeRing from './quantum3d/AmplitudeRing'
-import QuantumParticleField from './quantum3d/QuantumParticleField'
+import {
+  QuantumParticleCloud,
+  FloatingOrbs,
+  Sparkles,
+} from './quantum3d/effects/EnhancedParticles'
+import {
+  CosmicNebula,
+  QuantumAurora,
+  HolographicGrid,
+  EnergyWaveRipple,
+  QuantumVortex,
+} from './quantum3d/effects/QuantumEffects'
+import { QuantumPostProcessing, AdaptiveQuantumEffects } from './quantum3d/effects/PostProcessing'
 import {
   iqmApi,
   IQMConfig,
@@ -257,7 +269,7 @@ function VisualizationScene({
   numQubits,
   viewMode,
   probabilities,
-  onElementHover,
+  onElementHover: _onElementHover,
 }: {
   qubitStates: { theta: number; phi: number }[]
   entanglements: [number, number][]
@@ -271,11 +283,11 @@ function VisualizationScene({
       return [[0, 0, 0] as [number, number, number]]
     }
     if (numQubits <= 3) {
-      const spacing = 3.5
+      const spacing = 4
       const startX = -((numQubits - 1) * spacing) / 2
       return qubitStates.map((_, i) => [startX + i * spacing, 0, 0] as [number, number, number])
     }
-    const radius = numQubits * 0.7
+    const radius = numQubits * 0.85
     return qubitStates.map((_, i) => {
       const angle = (i / numQubits) * Math.PI * 2
       return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius] as [number, number, number]
@@ -287,7 +299,7 @@ function VisualizationScene({
     const n = probabilities.length
     if (n === 0) return []
     const gridSize = Math.ceil(Math.sqrt(n))
-    const cellSize = 6 / gridSize
+    const cellSize = 7 / gridSize
 
     return probabilities
       .filter(p => p.probability > 0.1)
@@ -296,44 +308,116 @@ function VisualizationScene({
         return {
           position: [
             ((idx % gridSize) - gridSize / 2 + 0.5) * cellSize,
-            prob.probability * 2 + 0.5,
+            prob.probability * 2.5 + 0.5,
             (Math.floor(idx / gridSize) - gridSize / 2 + 0.5) * cellSize
           ] as [number, number, number],
-          strength: prob.probability * 2,
+          strength: prob.probability * 2.5,
           color: `hsl(${((prob.phase || 0) / (2 * Math.PI)) * 360}, 85%, 55%)`
         }
       })
   }, [probabilities])
 
-  // Common lighting setup
-  const Lighting = () => (
+  const hasEntanglement = entanglements.length > 0
+  const hasSuperposition = qubitStates.some(s => s.theta > 0.1 && s.theta < Math.PI - 0.1)
+
+  // Enhanced lighting for gorgeous visuals
+  const EnhancedLighting = ({ viewMode: mode }: { viewMode: ViewMode }) => (
     <>
-      <ambientLight intensity={0.4} />
-      <pointLight position={[10, 10, 10]} intensity={1} color="#6366f1" />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#8b5cf6" />
+      <ambientLight intensity={0.25} />
+      <pointLight position={[12, 12, 12]} intensity={1.4} color="#8b5cf6" />
+      <pointLight position={[-12, -8, -12]} intensity={0.7} color="#06b6d4" />
+      <spotLight
+        position={[0, 18, 0]}
+        angle={0.4}
+        penumbra={1}
+        intensity={0.9}
+        color={mode === 'wave' ? '#ec4899' : '#8b5cf6'}
+        castShadow
+      />
+    </>
+  )
+
+  // Cosmic background with nebula and particles
+  const CosmicBackgroundEffects = ({ mode }: { mode: ViewMode }) => (
+    <>
+      <Stars radius={150} depth={80} count={3500} factor={5} fade speed={0.5} />
+      <CosmicNebula position={[0, 0, -45]} size={90} intensity={0.4} />
+      {(mode === 'wave' || mode === 'ring') && (
+        <QuantumAurora position={[0, 12, -12]} width={35} height={10} />
+      )}
+      <Sparkles count={120} radius={14} height={10} color="#ffffff" speed={0.4} />
+      <FloatingOrbs
+        count={12}
+        radius={11}
+        height={9}
+        colors={['#8b5cf6', '#06b6d4', '#ec4899', '#22c55e']}
+        speed={0.25}
+      />
     </>
   )
 
   if (viewMode === 'bloch') {
     return (
       <>
-        <PerspectiveCamera makeDefault position={[0, 3, numQubits > 2 ? 10 : 8]} fov={50} />
-        <Lighting />
-        <Stars radius={100} depth={50} count={1000} factor={4} fade speed={1} />
+        <PerspectiveCamera makeDefault position={[0, 4, numQubits > 2 ? 12 : 10]} fov={50} />
+        <EnhancedLighting viewMode={viewMode} />
+        <CosmicBackgroundEffects mode={viewMode} />
 
+        {/* Holographic grid floor */}
+        <HolographicGrid position={[0, -2.5, 0]} size={22} divisions={22} />
+
+        {/* Central vortex for entangled states */}
+        {hasEntanglement && (
+          <QuantumVortex
+            position={[0, -2.2, 0]}
+            innerRadius={0.25}
+            outerRadius={1.8}
+            depth={0.8}
+            intensity={0.5}
+          />
+        )}
+
+        {/* Enhanced Bloch spheres with particle fields */}
         {qubitStates.map((state, i) => (
-          <BlochSphere3D
+          <EnhancedBlochSphere
             key={i}
             state={{ ...state, label: `Q${i}` }}
             position={positions[i]}
-            radius={1}
+            radius={1.15}
             isEntangled={entanglements.some(([a, b]) => a === i || b === i)}
-            onElementHover={onElementHover}
+            showPedagogicGuides={i === 0 && numQubits === 1}
           />
         ))}
 
         <EntanglementLines positions={positions} entanglements={entanglements} />
-        <OrbitControls enablePan enableZoom enableRotate minDistance={4} maxDistance={20} />
+
+        {/* Ambient particle cloud */}
+        <QuantumParticleCloud
+          count={350}
+          radius={9}
+          height={7}
+          colors={['#8b5cf6', '#06b6d4', '#ec4899']}
+          speed={0.35}
+          turbulence={0.25}
+        />
+
+        {/* Wave ripples at base for superposition states */}
+        {hasSuperposition && (
+          <EnergyWaveRipple
+            position={[0, -2.4, 0]}
+            color="#8b5cf6"
+            maxRadius={7}
+            speed={0.4}
+            count={4}
+          />
+        )}
+
+        <OrbitControls enablePan enableZoom enableRotate minDistance={5} maxDistance={25} />
+        <AdaptiveQuantumEffects
+          quantumIntensity={hasSuperposition ? 0.75 : 0.5}
+          isEntangled={hasEntanglement}
+          isSuperposition={hasSuperposition}
+        />
       </>
     )
   }
@@ -341,20 +425,30 @@ function VisualizationScene({
   if (viewMode === 'towers') {
     return (
       <>
-        <PerspectiveCamera makeDefault position={[5, 5, 5]} fov={50} />
-        <Lighting />
-        <Stars radius={100} depth={50} count={1500} factor={4} fade speed={0.5} />
+        <PerspectiveCamera makeDefault position={[7, 7, 7]} fov={50} />
+        <EnhancedLighting viewMode={viewMode} />
+        <CosmicBackgroundEffects mode={viewMode} />
+        <HolographicGrid position={[0, -0.1, 0]} size={18} divisions={18} />
 
         <ProbabilityLandscape
           probabilities={probabilities}
           position={[0, 0, 0]}
-          maxHeight={3}
-          barWidth={0.5}
-          spacing={1.2}
+          maxHeight={4}
+          barWidth={0.65}
+          spacing={1.4}
           enhanced={true}
         />
 
-        <OrbitControls enablePan enableZoom enableRotate minDistance={4} maxDistance={20} />
+        <QuantumParticleCloud
+          count={280}
+          radius={7}
+          height={6}
+          colors={['#8b5cf6', '#06b6d4', '#22c55e']}
+          speed={0.5}
+        />
+
+        <OrbitControls enablePan enableZoom enableRotate minDistance={4} maxDistance={22} />
+        <QuantumPostProcessing bloomIntensity={1.5} bloomThreshold={0.35} />
       </>
     )
   }
@@ -362,29 +456,33 @@ function VisualizationScene({
   if (viewMode === 'wave') {
     return (
       <>
-        <PerspectiveCamera makeDefault position={[6, 6, 6]} fov={50} />
-        <Lighting />
-        <pointLight position={[0, 15, 0]} intensity={1} color="#06b6d4" />
-        <Stars radius={100} depth={50} count={2000} factor={5} fade speed={0.8} />
+        <PerspectiveCamera makeDefault position={[9, 9, 9]} fov={50} />
+        <EnhancedLighting viewMode={viewMode} />
+        <CosmicBackgroundEffects mode={viewMode} />
 
-        <AmplitudeWave3D
+        <EnhancedAmplitudeWave
           probabilities={probabilities}
           position={[0, 0, 0]}
-          size={6}
-          resolution={48}
+          size={8}
+          resolution={72}
         />
 
-        <QuantumParticleField
-          count={200}
-          radius={5}
-          height={4}
-          color="#06b6d4"
-          speed={0.8}
-          spiralIntensity={0.2}
-          probabilityAttractors={attractors}
+        <QuantumParticleCloud
+          count={400}
+          radius={6}
+          height={5}
+          colors={['#06b6d4', '#8b5cf6', '#ec4899']}
+          speed={0.65}
+          turbulence={0.35}
+          attractors={attractors}
         />
 
-        <OrbitControls enablePan enableZoom enableRotate minDistance={5} maxDistance={20} />
+        <OrbitControls enablePan enableZoom enableRotate minDistance={6} maxDistance={22} />
+        <QuantumPostProcessing
+          bloomIntensity={1.8}
+          bloomThreshold={0.3}
+          chromaticAberration={0.003}
+        />
       </>
     )
   }
@@ -392,28 +490,41 @@ function VisualizationScene({
   if (viewMode === 'ring') {
     return (
       <>
-        <PerspectiveCamera makeDefault position={[0, 5, 7]} fov={50} />
-        <Lighting />
-        <pointLight position={[0, 12, 0]} intensity={0.8} color="#8b5cf6" />
-        <Stars radius={100} depth={50} count={1800} factor={4} fade speed={0.6} />
+        <PerspectiveCamera makeDefault position={[0, 7, 9]} fov={50} />
+        <EnhancedLighting viewMode={viewMode} />
+        <CosmicBackgroundEffects mode={viewMode} />
+
+        {/* Central vortex */}
+        <QuantumVortex
+          position={[0, -0.8, 0]}
+          innerRadius={0.25}
+          outerRadius={1.3}
+          depth={0.6}
+          intensity={0.7}
+        />
 
         <AmplitudeRing
           probabilities={probabilities}
           position={[0, 0, 0]}
-          radius={3}
-          height={2.5}
-        />
-
-        <QuantumParticleField
-          count={150}
-          radius={4}
+          radius={3.5}
           height={3}
-          color="#8b5cf6"
-          speed={0.6}
-          spiralIntensity={0.3}
         />
 
-        <OrbitControls enablePan enableZoom enableRotate minDistance={4} maxDistance={18} />
+        <QuantumParticleCloud
+          count={280}
+          radius={5}
+          height={4}
+          colors={['#8b5cf6', '#ec4899', '#f59e0b']}
+          speed={0.45}
+          turbulence={0.4}
+        />
+
+        <OrbitControls enablePan enableZoom enableRotate minDistance={5} maxDistance={18} />
+        <QuantumPostProcessing
+          bloomIntensity={1.6}
+          bloomThreshold={0.35}
+          chromaticAberration={0.002}
+        />
       </>
     )
   }
