@@ -140,6 +140,51 @@ const GATE_INFO: Record<string, {
   },
 }
 
+// Bloch sphere element descriptions for hover tooltips
+const BLOCH_ELEMENT_INFO: Record<string, {
+  color: string
+  name: string
+  description: string
+  physicalMeaning: string
+}> = {
+  'sphere': {
+    color: '#6366f1',
+    name: 'Bloch Sphere',
+    description: 'Geometric representation of a qubit\'s quantum state',
+    physicalMeaning: 'Every point on or inside the sphere represents a valid qubit state. Pure states lie on the surface, mixed states are inside.'
+  },
+  'state-vector': {
+    color: '#22d3ee',
+    name: 'State Vector',
+    description: 'Current quantum state of the qubit',
+    physicalMeaning: 'The arrow points to where your qubit currently "is" - its position encodes both the measurement probabilities and quantum phase.'
+  },
+  'z-axis': {
+    color: '#22c55e',
+    name: 'Z-Axis (Computational Basis)',
+    description: '|0⟩ at top, |1⟩ at bottom',
+    physicalMeaning: 'The vertical axis represents the computational basis states. When you measure, you project onto this axis.'
+  },
+  'x-axis': {
+    color: '#ef4444',
+    name: 'X-Axis (Superposition Basis)',
+    description: '|+⟩ at +X, |-⟩ at -X',
+    physicalMeaning: 'The |+⟩ and |-⟩ states are equal superpositions with different phases. Hadamard gate rotates between Z and X bases.'
+  },
+  'y-axis': {
+    color: '#3b82f6',
+    name: 'Y-Axis (Circular Basis)',
+    description: '|i⟩ at +Y, |-i⟩ at -Y',
+    physicalMeaning: 'States on this axis have imaginary phase components. The Y-axis completes the 3D representation of all possible qubit states.'
+  },
+  'equator': {
+    color: '#6366f1',
+    name: 'Equator',
+    description: 'Equal superposition states with varying phase',
+    physicalMeaning: 'All points on the equator have 50/50 measurement probability for |0⟩ and |1⟩. They differ only in quantum phase.'
+  },
+}
+
 // Example circuits
 const EXAMPLES = [
   {
@@ -212,12 +257,14 @@ function VisualizationScene({
   numQubits,
   viewMode,
   probabilities,
+  onElementHover,
 }: {
   qubitStates: { theta: number; phi: number }[]
   entanglements: [number, number][]
   numQubits: number
   viewMode: ViewMode
   probabilities: { state: string; probability: number; phase?: number }[]
+  onElementHover?: (element: string | null) => void
 }) {
   const positions = useMemo(() => {
     if (numQubits === 1) {
@@ -281,6 +328,7 @@ function VisualizationScene({
             position={positions[i]}
             radius={1}
             isEntangled={entanglements.some(([a, b]) => a === i || b === i)}
+            onElementHover={onElementHover}
           />
         ))}
 
@@ -692,6 +740,7 @@ export default function QuantumLab() {
   const [viewMode, setViewMode] = useState<ViewMode>('bloch')
   const [showExamples, setShowExamples] = useState(false)
   const [hoveredGate, setHoveredGate] = useState<string | null>(null)
+  const [hoveredBlochElement, setHoveredBlochElement] = useState<string | null>(null)
   const [iqmResults, setIqmResults] = useState<Record<string, number> | null>(null)
   const [iqmStatus, setIqmStatus] = useState('')
   const [isRunningIqm, setIsRunningIqm] = useState(false)
@@ -1057,13 +1106,32 @@ export default function QuantumLab() {
                     numQubits={numQubits}
                     viewMode={viewMode}
                     probabilities={probabilitiesWithPhase}
+                    onElementHover={setHoveredBlochElement}
                   />
                 </Canvas>
               </Suspense>
             </div>
-            {/* Tooltip bar at bottom of viz - shows hovered gate or current step */}
+            {/* Tooltip bar at bottom of viz - shows hovered element, gate, or current step */}
             <div className="p-2 border-t border-gray-700/50 bg-gray-800/50 min-h-[36px]">
-              {hoveredGate && GATE_INFO[hoveredGate] ? (
+              {hoveredBlochElement && BLOCH_ELEMENT_INFO[hoveredBlochElement] ? (
+                <div className="flex items-center gap-3">
+                  <span
+                    className="px-2 py-0.5 rounded text-xs font-bold text-white"
+                    style={{ backgroundColor: BLOCH_ELEMENT_INFO[hoveredBlochElement]?.color }}
+                  >
+                    {BLOCH_ELEMENT_INFO[hoveredBlochElement]?.name.split(' ')[0]}
+                  </span>
+                  <span className="text-xs text-cyan-400 font-medium">
+                    {BLOCH_ELEMENT_INFO[hoveredBlochElement]?.name}
+                  </span>
+                  <span className="text-xs text-gray-400 flex-1">
+                    {BLOCH_ELEMENT_INFO[hoveredBlochElement]?.description}
+                  </span>
+                  <span className="text-xs text-gray-500 italic max-w-[40%] truncate">
+                    {BLOCH_ELEMENT_INFO[hoveredBlochElement]?.physicalMeaning}
+                  </span>
+                </div>
+              ) : hoveredGate && GATE_INFO[hoveredGate] ? (
                 <div className="flex items-center gap-3">
                   <span
                     className="px-2 py-0.5 rounded text-xs font-bold text-white"

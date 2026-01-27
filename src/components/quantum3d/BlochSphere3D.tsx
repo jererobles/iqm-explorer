@@ -17,6 +17,7 @@ interface BlochSphere3DProps {
   showLabels?: boolean
   glowColor?: string
   isEntangled?: boolean
+  onElementHover?: (element: string | null) => void
 }
 
 // Convert spherical to Cartesian coordinates
@@ -60,6 +61,7 @@ export default function BlochSphere3D({
   showLabels = true,
   glowColor = '#6366f1',
   isEntangled = false,
+  onElementHover,
 }: BlochSphere3DProps) {
   const sphereRef = useRef<THREE.Mesh>(null)
   const glowRef = useRef<THREE.Mesh>(null)
@@ -108,7 +110,12 @@ export default function BlochSphere3D({
       </Sphere>
 
       {/* Main sphere - higher contrast */}
-      <Sphere ref={sphereRef} args={[radius, 64, 64]}>
+      <Sphere
+        ref={sphereRef}
+        args={[radius, 64, 64]}
+        onPointerEnter={() => onElementHover?.('sphere')}
+        onPointerLeave={() => onElementHover?.(null)}
+      >
         <meshPhysicalMaterial
           color="#0f0a2e"
           transparent
@@ -142,6 +149,15 @@ export default function BlochSphere3D({
         dashSize={0.1}
         gapSize={0.05}
       />
+      {/* Equator hitbox */}
+      <mesh
+        rotation={[Math.PI / 2, 0, 0]}
+        onPointerEnter={() => onElementHover?.('equator')}
+        onPointerLeave={() => onElementHover?.(null)}
+      >
+        <torusGeometry args={[radius, 0.06, 8, 32]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
 
       {/* Meridian circles */}
       <Line
@@ -174,6 +190,16 @@ export default function BlochSphere3D({
         color="#22c55e"
         lineWidth={2}
       />
+      {/* Z-axis hitbox */}
+      <mesh
+        position={[0, 0, 0]}
+        rotation={[0, 0, 0]}
+        onPointerEnter={() => onElementHover?.('z-axis')}
+        onPointerLeave={() => onElementHover?.(null)}
+      >
+        <cylinderGeometry args={[0.08, 0.08, axisLength * 2, 8]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
 
       {/* X-axis (|+⟩ to |-⟩) */}
       <Line
@@ -184,6 +210,16 @@ export default function BlochSphere3D({
         color="#ef4444"
         lineWidth={2}
       />
+      {/* X-axis hitbox */}
+      <mesh
+        position={[0, 0, 0]}
+        rotation={[0, 0, Math.PI / 2]}
+        onPointerEnter={() => onElementHover?.('x-axis')}
+        onPointerLeave={() => onElementHover?.(null)}
+      >
+        <cylinderGeometry args={[0.08, 0.08, axisLength * 2, 8]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
 
       {/* Y-axis */}
       <Line
@@ -194,6 +230,16 @@ export default function BlochSphere3D({
         color="#3b82f6"
         lineWidth={2}
       />
+      {/* Y-axis hitbox */}
+      <mesh
+        position={[0, 0, 0]}
+        rotation={[Math.PI / 2, 0, 0]}
+        onPointerEnter={() => onElementHover?.('y-axis')}
+        onPointerLeave={() => onElementHover?.(null)}
+      >
+        <cylinderGeometry args={[0.08, 0.08, axisLength * 2, 8]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
 
       {/* State vector line */}
       <animated.group>
@@ -208,15 +254,23 @@ export default function BlochSphere3D({
       </animated.group>
 
       {/* State point (glowing orb) - brighter */}
-      <animated.mesh position={stateVec as unknown as THREE.Vector3}>
+      <animated.mesh
+        position={stateVec as unknown as THREE.Vector3}
+        onPointerEnter={() => onElementHover?.('state-vector')}
+        onPointerLeave={() => onElementHover?.(null)}
+      >
         <sphereGeometry args={[0.15, 32, 32]} />
         <meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={2} />
       </animated.mesh>
 
-      {/* State point glow */}
-      <animated.mesh position={stateVec as unknown as THREE.Vector3}>
-        <sphereGeometry args={[0.25, 32, 32]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.5} />
+      {/* State point glow - larger hitbox */}
+      <animated.mesh
+        position={stateVec as unknown as THREE.Vector3}
+        onPointerEnter={() => onElementHover?.('state-vector')}
+        onPointerLeave={() => onElementHover?.(null)}
+      >
+        <sphereGeometry args={[0.3, 32, 32]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.3} />
       </animated.mesh>
 
       {/* Point light at state position */}
