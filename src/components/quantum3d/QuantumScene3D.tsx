@@ -2,13 +2,16 @@ import { Suspense, useState, useCallback, useMemo, useRef, useEffect } from 'rea
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars, PerspectiveCamera } from '@react-three/drei'
 import { motion } from 'framer-motion'
-import { Play, Pause, SkipBack, SkipForward, RotateCcw, Zap, Box, GitBranch, BarChart3 } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, RotateCcw, Zap, Box, GitBranch, BarChart3, Waves, Circle } from 'lucide-react'
 import BlochSphere3D, { QubitState } from './BlochSphere3D'
 import EntanglementLines from './EntanglementLines'
 import CircuitPath3D from './CircuitPath3D'
 import ProbabilityLandscape from './ProbabilityLandscape'
+import AmplitudeWave3D from './AmplitudeWave3D'
+import AmplitudeRing from './AmplitudeRing'
+import QuantumParticleField from './QuantumParticleField'
 
-type ViewMode = 'bloch' | 'circuit' | 'landscape'
+type ViewMode = 'bloch' | 'circuit' | 'landscape' | 'wave' | 'ring'
 
 // Gate definitions with their transformations
 const GATES = {
@@ -226,9 +229,120 @@ function LandscapeSceneContent({
         maxHeight={4}
         barWidth={0.7}
         spacing={1.4}
+        enhanced={true}
       />
 
       <OrbitControls enablePan enableZoom enableRotate minDistance={5} maxDistance={30} />
+    </>
+  )
+}
+
+// Amplitude wave scene content - 3D wave surface visualization
+function WaveSceneContent({
+  probabilities,
+}: {
+  probabilities: { state: string; probability: number; phase: number }[]
+}) {
+  // Calculate attractors for particle field from probabilities
+  const attractors = useMemo(() => {
+    const n = probabilities.length
+    const gridSize = Math.ceil(Math.sqrt(n))
+    const cellSize = 8 / gridSize
+
+    return probabilities
+      .filter(p => p.probability > 0.1)
+      .map((prob) => {
+        const idx = probabilities.indexOf(prob)
+        return {
+          position: [
+            ((idx % gridSize) - gridSize / 2 + 0.5) * cellSize,
+            prob.probability * 2 + 0.5,
+            (Math.floor(idx / gridSize) - gridSize / 2 + 0.5) * cellSize
+          ] as [number, number, number],
+          strength: prob.probability * 2,
+          color: `hsl(${(prob.phase / (2 * Math.PI)) * 360}, 85%, 55%)`
+        }
+      })
+  }, [probabilities])
+
+  return (
+    <>
+      <PerspectiveCamera makeDefault position={[8, 8, 8]} fov={50} />
+      <ambientLight intensity={0.3} />
+      <pointLight position={[10, 10, 10]} intensity={1.5} color="#8b5cf6" />
+      <pointLight position={[-10, 5, -5]} intensity={0.8} color="#06b6d4" />
+      <spotLight
+        position={[0, 15, 0]}
+        angle={0.4}
+        penumbra={1}
+        intensity={1}
+        color="#6366f1"
+        castShadow
+      />
+      <Stars radius={100} depth={50} count={2500} factor={5} fade speed={0.8} />
+
+      <AmplitudeWave3D
+        probabilities={probabilities}
+        position={[0, 0, 0]}
+        size={8}
+        resolution={64}
+      />
+
+      {/* Add ambient quantum particle field */}
+      <QuantumParticleField
+        count={300}
+        radius={6}
+        height={5}
+        color="#06b6d4"
+        speed={0.8}
+        spiralIntensity={0.2}
+        probabilityAttractors={attractors}
+      />
+
+      <OrbitControls enablePan enableZoom enableRotate minDistance={6} maxDistance={25} />
+    </>
+  )
+}
+
+// Amplitude ring scene content - circular wave visualization
+function RingSceneContent({
+  probabilities,
+}: {
+  probabilities: { state: string; probability: number; phase: number }[]
+}) {
+  return (
+    <>
+      <PerspectiveCamera makeDefault position={[0, 6, 8]} fov={50} />
+      <ambientLight intensity={0.3} />
+      <pointLight position={[5, 8, 5]} intensity={1.2} color="#8b5cf6" />
+      <pointLight position={[-5, 5, -5]} intensity={0.7} color="#ec4899" />
+      <spotLight
+        position={[0, 12, 0]}
+        angle={0.5}
+        penumbra={1}
+        intensity={0.8}
+        color="#06b6d4"
+      />
+      <Stars radius={100} depth={50} count={2000} factor={4} fade speed={0.6} />
+
+      <AmplitudeRing
+        probabilities={probabilities}
+        position={[0, 0, 0]}
+        radius={3.5}
+        height={3}
+      />
+
+      {/* Ambient particle field around the ring */}
+      <QuantumParticleField
+        count={200}
+        radius={5}
+        height={4}
+        color="#8b5cf6"
+        speed={0.6}
+        spiralIntensity={0.4}
+      />
+
+      <OrbitControls enablePan enableZoom enableRotate minDistance={5} maxDistance={20} />
     </>
   )
 }
@@ -431,11 +545,17 @@ export default function QuantumScene3D() {
               {viewMode === 'landscape' && (
                 <LandscapeSceneContent probabilities={probabilities} />
               )}
+              {viewMode === 'wave' && (
+                <WaveSceneContent probabilities={probabilities} />
+              )}
+              {viewMode === 'ring' && (
+                <RingSceneContent probabilities={probabilities} />
+              )}
             </Canvas>
           </Suspense>
 
           {/* View mode selector */}
-          <div className="absolute top-4 left-4 flex gap-2">
+          <div className="absolute top-4 left-4 flex flex-wrap gap-2">
             <motion.button
               onClick={() => setViewMode('bloch')}
               className={`p-2 rounded-lg backdrop-blur-sm flex items-center gap-2 ${
@@ -473,7 +593,33 @@ export default function QuantumScene3D() {
               whileTap={{ scale: 0.95 }}
             >
               <BarChart3 className="w-4 h-4" />
-              <span className="text-sm">Probabilities</span>
+              <span className="text-sm">Towers</span>
+            </motion.button>
+            <motion.button
+              onClick={() => setViewMode('wave')}
+              className={`p-2 rounded-lg backdrop-blur-sm flex items-center gap-2 ${
+                viewMode === 'wave'
+                  ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white'
+                  : 'bg-slate-800/80 text-gray-400 hover:text-white'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Waves className="w-4 h-4" />
+              <span className="text-sm">Wave</span>
+            </motion.button>
+            <motion.button
+              onClick={() => setViewMode('ring')}
+              className={`p-2 rounded-lg backdrop-blur-sm flex items-center gap-2 ${
+                viewMode === 'ring'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
+                  : 'bg-slate-800/80 text-gray-400 hover:text-white'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Circle className="w-4 h-4" />
+              <span className="text-sm">Ring</span>
             </motion.button>
 
             <select
@@ -509,7 +655,9 @@ export default function QuantumScene3D() {
             <div className="bg-slate-900/80 backdrop-blur-sm rounded-lg px-4 py-2 text-sm text-gray-400">
               {viewMode === 'bloch' && 'Bloch Sphere View: Each sphere represents a qubit state. Entangled qubits are connected by quantum threads.'}
               {viewMode === 'circuit' && 'Circuit View: Watch your quantum operations as gates the state flows through. Time moves left to right.'}
-              {viewMode === 'landscape' && 'Probability Landscape: Heights show measurement probability for each computational basis state. Colors indicate phase.'}
+              {viewMode === 'landscape' && 'Probability Towers: Glowing cylindrical towers visualize measurement probability. Height = probability, color = phase. Watch particles flow toward high-probability states.'}
+              {viewMode === 'wave' && 'Amplitude Wave: A dynamic 3D wave surface where height represents probability amplitude. Ripples emanate from probability centers, particles attracted to peaks. Phase encoded in color.'}
+              {viewMode === 'ring' && 'Amplitude Ring: Circular visualization with pillars arranged radially. Watch interference patterns in the center disk and energy particles orbiting the quantum states.'}
             </div>
           </div>
         </div>
