@@ -14,5 +14,8 @@ export { default as EnhancedQuantumScene } from './EnhancedQuantumScene'
 export { default as EnhancedBlochSphere } from './EnhancedBlochSphere'
 export { default as EnhancedAmplitudeWave } from './EnhancedAmplitudeWave'
 
+// Error boundary for Three.js
+export { ThreeErrorBoundary } from './ThreeErrorBoundary'
+
 // Effects
 export * from './effects'

@@ -252,6 +252,7 @@ function VortexParticles({
     const colors = new Float32Array(count * 3)
     const particleData = new Float32Array(count * 4) // radius, angle, speed, phase
 
+    // Ensure safe radius values to prevent NaN
     const safeInnerRadius = Math.max(0.1, innerRadius)
     const safeOuterRadius = Math.max(safeInnerRadius + 0.1, outerRadius)
 
@@ -301,6 +302,7 @@ function VortexParticles({
       // Gradually decrease radius
       data[i * 4] -= delta * 0.3 * data[i * 4 + 2]
 
+      // Clamp radius to prevent negative values
       const radius = Math.max(0, data[i * 4])
       const angle = data[i * 4 + 1]
 
@@ -308,7 +310,7 @@ function VortexParticles({
       posArray[i * 3 + 1] = Math.sin(angle) * radius
       posArray[i * 3 + 2] = Math.sin(time + data[i * 4 + 3]) * 0.5
 
-      // Reset particles that reach center
+      // Reset particles that reach center (use safe radius values)
       if (radius < safeInnerRadius * 0.8) {
         data[i * 4] = safeOuterRadius * (0.8 + Math.random() * 0.2)
         data[i * 4 + 1] = Math.random() * Math.PI * 2

@@ -511,7 +511,7 @@ export function Sparkles({
     const siz = new Float32Array(count)
     const ops = new Float32Array(count)
 
-    // Ensure safe radius to avoid division by zero
+    // Prevent division by zero
     const safeRadius = Math.max(0.1, radius)
     const heightScale = height / safeRadius
 
