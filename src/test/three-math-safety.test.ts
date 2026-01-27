@@ -15,7 +15,7 @@ describe('Three.js Math Safety', () => {
       ]
 
       for (const { r, y } of testCases) {
-        const unsafeValue = r * r - y * y * 0.95
+        // Without clamping, r*r - y*y*0.95 would be negative, causing NaN
         const safeValue = Math.max(0.0001, r * r - y * y * 0.95)
         const result = Math.sqrt(safeValue)
 

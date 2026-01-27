@@ -1,80 +1,8 @@
 import { useRef, useMemo } from 'react'
-import { useFrame, extend } from '@react-three/fiber'
-import { shaderMaterial } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-// Custom shader material for quantum energy field
-const QuantumFieldMaterial = shaderMaterial(
-  {
-    time: 0,
-    color1: new THREE.Color('#8b5cf6'),
-    color2: new THREE.Color('#06b6d4'),
-    color3: new THREE.Color('#ec4899'),
-    opacity: 0.5,
-    pulseSpeed: 1.0,
-    waveIntensity: 1.0,
-  },
-  // Vertex shader
-  `
-    varying vec2 vUv;
-    varying vec3 vPosition;
-    varying vec3 vNormal;
-
-    void main() {
-      vUv = uv;
-      vPosition = position;
-      vNormal = normal;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  // Fragment shader
-  `
-    uniform float time;
-    uniform vec3 color1;
-    uniform vec3 color2;
-    uniform vec3 color3;
-    uniform float opacity;
-    uniform float pulseSpeed;
-    uniform float waveIntensity;
-
-    varying vec2 vUv;
-    varying vec3 vPosition;
-    varying vec3 vNormal;
-
-    float noise(vec2 p) {
-      return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-    }
-
-    void main() {
-      // Create flowing energy pattern
-      float wave1 = sin(vUv.x * 10.0 + time * pulseSpeed) * 0.5 + 0.5;
-      float wave2 = sin(vUv.y * 8.0 - time * pulseSpeed * 0.7) * 0.5 + 0.5;
-      float wave3 = sin((vUv.x + vUv.y) * 6.0 + time * pulseSpeed * 1.3) * 0.5 + 0.5;
-
-      // Combine waves
-      float pattern = (wave1 + wave2 + wave3) / 3.0;
-      pattern = pow(pattern, 1.5) * waveIntensity;
-
-      // Add noise for organic feel
-      float n = noise(vUv * 100.0 + time);
-      pattern += n * 0.1;
-
-      // Color gradient based on pattern
-      vec3 color = mix(color1, color2, wave1);
-      color = mix(color, color3, wave2 * 0.5);
-
-      // Edge glow
-      float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 3.0);
-      color += fresnel * color2 * 0.5;
-
-      gl_FragColor = vec4(color, opacity * pattern);
-    }
-  `
-)
-
-extend({ QuantumFieldMaterial })
-
-// Cosmic nebula background effect
+// Cosmic nebula background effect - simplified version without custom shaders
 export function CosmicNebula({
   position = [0, 0, -20] as [number, number, number],
   size = 50,
@@ -84,33 +12,49 @@ export function CosmicNebula({
   size?: number
   intensity?: number
 }) {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const materialRef = useRef<THREE.ShaderMaterial>(null)
+  const groupRef = useRef<THREE.Group>(null)
+
+  // Create multiple overlapping layers for nebula effect
+  const layers = useMemo(() => {
+    return [
+      { color: '#8b5cf6', opacity: 0.15, offset: 0, scale: 1 },
+      { color: '#06b6d4', opacity: 0.1, offset: 1, scale: 0.9 },
+      { color: '#ec4899', opacity: 0.08, offset: 2, scale: 0.8 },
+    ]
+  }, [])
 
   useFrame((state) => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.time.value = state.clock.elapsedTime * 0.2
-    }
-    if (meshRef.current) {
-      meshRef.current.rotation.z += 0.0005
-    }
+    if (!groupRef.current) return
+    const time = state.clock.elapsedTime
+
+    groupRef.current.rotation.z += 0.0003
+
+    // Animate individual layers
+    groupRef.current.children.forEach((child, i) => {
+      if (child instanceof THREE.Mesh) {
+        const material = child.material as THREE.MeshBasicMaterial
+        const pulse = Math.sin(time * 0.3 + i) * 0.5 + 0.5
+        material.opacity = layers[i].opacity * intensity * (0.7 + pulse * 0.3)
+      }
+    })
   })
 
   return (
-    <mesh ref={meshRef} position={position}>
-      <planeGeometry args={[size, size, 1, 1]} />
-      {/* @ts-expect-error - custom material */}
-      <quantumFieldMaterial
-        ref={materialRef}
-        transparent
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-        side={THREE.DoubleSide}
-        opacity={0.3 * intensity}
-        pulseSpeed={0.3}
-        waveIntensity={0.8}
-      />
-    </mesh>
+    <group ref={groupRef} position={position}>
+      {layers.map((layer, i) => (
+        <mesh key={i} position={[0, 0, i * 0.1]} scale={layer.scale}>
+          <planeGeometry args={[size, size]} />
+          <meshBasicMaterial
+            color={layer.color}
+            transparent
+            opacity={layer.opacity * intensity}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ))}
+    </group>
   )
 }
 
@@ -299,31 +243,34 @@ function VortexParticles({
   intensity: number
 }) {
   const pointsRef = useRef<THREE.Points>(null)
+  const dataRef = useRef<Float32Array | null>(null)
 
-  const { positions, colors, data, safeInnerRadius, safeOuterRadius } = useMemo(() => {
-    const pos = new Float32Array(count * 3)
-    const col = new Float32Array(count * 3)
+  // Initialize geometry with useMemo
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry()
+    const positions = new Float32Array(count * 3)
+    const colors = new Float32Array(count * 3)
     const particleData = new Float32Array(count * 4) // radius, angle, speed, phase
 
     // Ensure safe radius values to prevent NaN
-    const safeInner = Math.max(0.1, innerRadius)
-    const safeOuter = Math.max(safeInner + 0.1, outerRadius)
+    const safeInnerRadius = Math.max(0.1, innerRadius)
+    const safeOuterRadius = Math.max(safeInnerRadius + 0.1, outerRadius)
 
     for (let i = 0; i < count; i++) {
-      const radius = safeInner + Math.random() * (safeOuter - safeInner)
+      const radius = safeInnerRadius + Math.random() * (safeOuterRadius - safeInnerRadius)
       const angle = Math.random() * Math.PI * 2
       const z = (Math.random() - 0.5) * 2
 
-      pos[i * 3] = Math.cos(angle) * radius
-      pos[i * 3 + 1] = Math.sin(angle) * radius
-      pos[i * 3 + 2] = z
+      positions[i * 3] = Math.cos(angle) * radius
+      positions[i * 3 + 1] = Math.sin(angle) * radius
+      positions[i * 3 + 2] = z
 
       // Purple-cyan gradient
       const hue = 0.7 + Math.random() * 0.3
       const color = new THREE.Color().setHSL(hue, 0.9, 0.6)
-      col[i * 3] = color.r
-      col[i * 3 + 1] = color.g
-      col[i * 3 + 2] = color.b
+      colors[i * 3] = color.r
+      colors[i * 3 + 1] = color.g
+      colors[i * 3 + 2] = color.b
 
       particleData[i * 4] = radius
       particleData[i * 4 + 1] = angle
@@ -331,14 +278,22 @@ function VortexParticles({
       particleData[i * 4 + 3] = Math.random() * Math.PI * 2
     }
 
-    return { positions: pos, colors: col, data: particleData, safeInnerRadius: safeInner, safeOuterRadius: safeOuter }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    dataRef.current = particleData
+
+    return geo
   }, [count, innerRadius, outerRadius])
 
   useFrame((state, delta) => {
-    if (!pointsRef.current) return
+    if (!pointsRef.current || !dataRef.current) return
 
-    const posAttr = pointsRef.current.geometry.attributes.position.array as Float32Array
+    const posAttr = pointsRef.current.geometry.attributes.position
+    const posArray = posAttr.array as Float32Array
+    const data = dataRef.current
     const time = state.clock.elapsedTime
+    const safeInnerRadius = Math.max(0.1, innerRadius)
+    const safeOuterRadius = Math.max(safeInnerRadius + 0.1, outerRadius)
 
     for (let i = 0; i < count; i++) {
       // Update angle (spiral inward)
@@ -351,9 +306,9 @@ function VortexParticles({
       const radius = Math.max(0, data[i * 4])
       const angle = data[i * 4 + 1]
 
-      posAttr[i * 3] = Math.cos(angle) * radius
-      posAttr[i * 3 + 1] = Math.sin(angle) * radius
-      posAttr[i * 3 + 2] = Math.sin(time + data[i * 4 + 3]) * 0.5
+      posArray[i * 3] = Math.cos(angle) * radius
+      posArray[i * 3 + 1] = Math.sin(angle) * radius
+      posArray[i * 3 + 2] = Math.sin(time + data[i * 4 + 3]) * 0.5
 
       // Reset particles that reach center (use safe radius values)
       if (radius < safeInnerRadius * 0.8) {
@@ -362,15 +317,11 @@ function VortexParticles({
       }
     }
 
-    pointsRef.current.geometry.attributes.position.needsUpdate = true
+    posAttr.needsUpdate = true
   })
 
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
-      </bufferGeometry>
+    <points ref={pointsRef} geometry={geometry}>
       <pointsMaterial
         size={0.08}
         vertexColors
@@ -436,7 +387,7 @@ export function EnergyWaveRipple({
   )
 }
 
-// Floating holographic grid
+// Floating holographic grid - simplified version using gridHelper
 export function HolographicGrid({
   position = [0, -2, 0] as [number, number, number],
   size = 20,
@@ -450,70 +401,33 @@ export function HolographicGrid({
   color1?: string
   color2?: string
 }) {
-  const linesRef = useRef<THREE.Group>(null)
-
-  const { lines } = useMemo(() => {
-    const lineArray: { start: THREE.Vector3; end: THREE.Vector3; isHorizontal: boolean }[] = []
-    const halfSize = size / 2
-    const step = size / divisions
-
-    // Horizontal lines
-    for (let i = 0; i <= divisions; i++) {
-      const z = -halfSize + i * step
-      lineArray.push({
-        start: new THREE.Vector3(-halfSize, 0, z),
-        end: new THREE.Vector3(halfSize, 0, z),
-        isHorizontal: true,
-      })
-    }
-
-    // Vertical lines
-    for (let i = 0; i <= divisions; i++) {
-      const x = -halfSize + i * step
-      lineArray.push({
-        start: new THREE.Vector3(x, 0, -halfSize),
-        end: new THREE.Vector3(x, 0, halfSize),
-        isHorizontal: false,
-      })
-    }
-
-    return { lines: lineArray }
-  }, [size, divisions])
+  const gridRef = useRef<THREE.GridHelper>(null)
 
   useFrame((state) => {
-    if (!linesRef.current) return
+    if (!gridRef.current) return
     const time = state.clock.elapsedTime
-
-    linesRef.current.children.forEach((child, i) => {
-      if (child instanceof THREE.Line) {
-        const material = child.material as THREE.LineBasicMaterial
-        const wave = Math.sin(time * 2 + i * 0.2) * 0.5 + 0.5
-        material.opacity = 0.2 + wave * 0.3
-      }
-    })
+    const material = gridRef.current.material as THREE.Material
+    if (material && 'opacity' in material) {
+      (material as THREE.MeshBasicMaterial).opacity = 0.25 + Math.sin(time * 0.5) * 0.1
+    }
   })
 
   return (
-    <group ref={linesRef} position={position}>
-      {lines.map((line, i) => (
-        <line key={i}>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              args={[new Float32Array([
-                line.start.x, line.start.y, line.start.z,
-                line.end.x, line.end.y, line.end.z,
-              ]), 3]}
-            />
-          </bufferGeometry>
-          <lineBasicMaterial
-            color={line.isHorizontal ? color1 : color2}
-            transparent
-            opacity={0.3}
-            blending={THREE.AdditiveBlending}
-          />
-        </line>
-      ))}
+    <group position={position}>
+      <gridHelper
+        ref={gridRef}
+        args={[size, divisions, color1, color2]}
+      />
+      {/* Add subtle glow plane underneath */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+        <planeGeometry args={[size * 0.8, size * 0.8]} />
+        <meshBasicMaterial
+          color={color1}
+          transparent
+          opacity={0.05}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
     </group>
   )
 }
