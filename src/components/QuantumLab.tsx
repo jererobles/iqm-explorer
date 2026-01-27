@@ -15,10 +15,6 @@ import {
   RotateCcw,
   Info,
   Zap,
-  Box,
-  Waves,
-  Circle,
-  BarChart3,
 } from 'lucide-react'
 import { useQuantum, GateOperation } from '../context/QuantumContext'
 import BlochSphere3D from './quantum3d/BlochSphere3D'
@@ -142,77 +138,6 @@ const GATE_INFO: Record<string, {
     physicalMeaning: 'Observes the qubit, collapsing its quantum state to a definite classical value (0 or 1)',
     example: 'Final step to extract classical information from quantum computation'
   },
-}
-
-// Step explanation generator for pedagogic content
-function getStepExplanation(gate: string, qubits: number[], stepIndex: number, totalSteps: number): {
-  title: string
-  explanation: string
-  blochEffect: string
-  quantumConcept: string
-} {
-  const gateInfo = GATE_INFO[gate]
-  const qubitStr = qubits.length > 1 ? `Q${qubits[0]}→Q${qubits[1]}` : `Q${qubits[0]}`
-
-  const explanations: Record<string, { blochEffect: string; quantumConcept: string }> = {
-    H: {
-      blochEffect: 'Rotates the state vector to the equator of the Bloch sphere, creating equal probability of |0⟩ and |1⟩',
-      quantumConcept: 'SUPERPOSITION: The qubit now exists in both states at once until measured!'
-    },
-    X: {
-      blochEffect: 'Flips the state vector 180° around the X-axis',
-      quantumConcept: 'BIT FLIP: Like a classical NOT gate, but works on superposition states too'
-    },
-    Y: {
-      blochEffect: 'Rotates 180° around the Y-axis, combining bit and phase flip',
-      quantumConcept: 'COMBINED ROTATION: Useful for creating specific quantum states'
-    },
-    Z: {
-      blochEffect: 'Rotates 180° around the Z-axis (no visible change for |0⟩ or |1⟩, but affects superpositions!)',
-      quantumConcept: 'PHASE FLIP: Changes the relative phase between |0⟩ and |1⟩ components'
-    },
-    S: {
-      blochEffect: 'Rotates 90° around the Z-axis',
-      quantumConcept: 'PHASE GATE: Adds a quarter-turn of phase to the |1⟩ component'
-    },
-    T: {
-      blochEffect: 'Rotates 45° around the Z-axis',
-      quantumConcept: 'MAGIC GATE: Essential for universal quantum computation'
-    },
-    CX: {
-      blochEffect: 'Correlates the two qubits - if control is in superposition, creates entanglement!',
-      quantumConcept: 'ENTANGLEMENT: The qubits become correlated in a way impossible classically'
-    },
-    CZ: {
-      blochEffect: 'Adds a phase when both qubits are |1⟩',
-      quantumConcept: 'NATIVE GATE: IQM hardware implements this directly!'
-    },
-    RX: {
-      blochEffect: 'Smoothly rotates around the X-axis by the specified angle',
-      quantumConcept: 'PARAMETERIZED GATE: Used in variational quantum algorithms'
-    },
-    RY: {
-      blochEffect: 'Smoothly rotates around the Y-axis',
-      quantumConcept: 'STATE PREPARATION: Can prepare any state on the Bloch sphere from |0⟩'
-    },
-    RZ: {
-      blochEffect: 'Adjusts phase angle around the Z-axis',
-      quantumConcept: 'PHASE CONTROL: Key for interference effects'
-    },
-    M: {
-      blochEffect: 'Collapses to either |0⟩ (north pole) or |1⟩ (south pole) based on probabilities',
-      quantumConcept: 'MEASUREMENT: The quantum state collapses - superposition ends, classical result appears!'
-    },
-  }
-
-  const specific = explanations[gate] || { blochEffect: 'Transforms the quantum state', quantumConcept: 'Quantum operation' }
-
-  return {
-    title: `Step ${stepIndex + 1}/${totalSteps}: ${gateInfo?.name || gate} on ${qubitStr}`,
-    explanation: gateInfo?.physicalMeaning || 'Applies a quantum transformation',
-    blochEffect: specific.blochEffect,
-    quantumConcept: specific.quantumConcept,
-  }
 }
 
 // Example circuits
@@ -1009,23 +934,23 @@ export default function QuantumLab() {
         </motion.div>
       )}
 
-      {/* Top row: Code Editor + 3D Visualization side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ height: '380px' }}>
-        {/* Left: Code Editor */}
-        <div className="glass-card overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between p-3 border-b border-gray-700/50">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500" />
-              <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="ml-2 text-sm text-gray-400">circuit.py</span>
+      {/* Top row: Code Editor (1/3) + 3D Visualization (2/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ height: '420px' }}>
+        {/* Left: Code Editor - 1/3 width */}
+        <div className="glass-card overflow-hidden flex flex-col lg:col-span-1">
+          <div className="flex items-center justify-between p-2 border-b border-gray-700/50">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+              <span className="ml-2 text-xs text-gray-400">circuit.py</span>
             </div>
             <button
               onClick={() => setCode(EXAMPLES[0].code)}
-              className="p-1.5 text-gray-400 hover:text-white rounded"
+              className="p-1 text-gray-400 hover:text-white rounded"
               title="Reset to Bell State example"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
           <div className="flex-1 relative">
@@ -1038,81 +963,88 @@ export default function QuantumLab() {
               onMount={handleEditorMount}
               options={{
                 minimap: { enabled: false },
-                fontSize: 13,
+                fontSize: 12,
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
-                padding: { top: 12 },
+                padding: { top: 8 },
                 tabSize: 2,
                 wordWrap: 'on',
               }}
             />
-            {/* Current line explanation overlay */}
-            {currentStep > 0 && currentStep <= operations.length && (
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-900/95 to-transparent p-3">
-                <div className="text-xs">
-                  <span className="text-cyan-400 font-bold">
-                    {GATE_INFO[operations[currentStep - 1]?.gate]?.name || operations[currentStep - 1]?.gate}
-                  </span>
-                  <span className="text-gray-400 ml-2">
-                    {GATE_INFO[operations[currentStep - 1]?.gate]?.physicalMeaning}
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right: 3D Visualization with step explanation */}
-        <div className="glass-card overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between p-3 border-b border-gray-700/50">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-white">Quantum State</span>
-              <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full">
-                {numQubits} qubit{numQubits > 1 ? 's' : ''}
+        {/* Right: 3D Visualization - 2/3 width */}
+        <div className="glass-card overflow-hidden flex flex-col lg:col-span-2">
+          {/* Header with view mode selector */}
+          <div className="flex items-center justify-between p-2 border-b border-gray-700/50">
+            <div className="flex items-center gap-3">
+              {/* View mode buttons */}
+              <div className="flex items-center gap-0.5 bg-gray-800/50 rounded-lg p-0.5">
+                <motion.button
+                  onClick={() => setViewMode('bloch')}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'bloch' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Bloch
+                </motion.button>
+                <motion.button
+                  onClick={() => setViewMode('towers')}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'towers' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Towers
+                </motion.button>
+                <motion.button
+                  onClick={() => setViewMode('wave')}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'wave' ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Wave
+                </motion.button>
+                <motion.button
+                  onClick={() => setViewMode('ring')}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${viewMode === 'ring' ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Ring
+                </motion.button>
+              </div>
+              <span className="text-xs text-gray-500">
+                {numQubits}Q · Step {currentStep}/{steps.length - 1}
               </span>
             </div>
-            {/* View mode selector */}
-            <div className="flex items-center gap-1">
-              <motion.button
-                onClick={() => setViewMode('bloch')}
-                className={`p-1.5 rounded ${viewMode === 'bloch' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Bloch Sphere View"
-              >
-                <Box className="w-3.5 h-3.5" />
-              </motion.button>
-              <motion.button
-                onClick={() => setViewMode('towers')}
-                className={`p-1.5 rounded ${viewMode === 'towers' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Probability Towers"
-              >
-                <BarChart3 className="w-3.5 h-3.5" />
-              </motion.button>
-              <motion.button
-                onClick={() => setViewMode('wave')}
-                className={`p-1.5 rounded ${viewMode === 'wave' ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Amplitude Wave"
-              >
-                <Waves className="w-3.5 h-3.5" />
-              </motion.button>
-              <motion.button
-                onClick={() => setViewMode('ring')}
-                className={`p-1.5 rounded ${viewMode === 'ring' ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Amplitude Ring"
-              >
-                <Circle className="w-3.5 h-3.5" />
-              </motion.button>
-              <span className="text-xs text-gray-500 ml-2">Step {currentStep}/{steps.length - 1}</span>
+            {/* Current gate info - moved to header */}
+            <div className="flex items-center gap-2">
+              {currentStep > 0 && currentStep <= operations.length ? (
+                <div className="flex items-center gap-2">
+                  <span
+                    className="px-2 py-0.5 rounded text-xs font-bold text-white"
+                    style={{ backgroundColor: GATE_INFO[operations[currentStep - 1]?.gate]?.color }}
+                  >
+                    {operations[currentStep - 1]?.gate}
+                  </span>
+                  <span className="text-xs text-cyan-400">
+                    {GATE_INFO[operations[currentStep - 1]?.gate]?.name}
+                  </span>
+                </div>
+              ) : currentStep === 0 ? (
+                <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">
+                  Initial |0⟩ State
+                </span>
+              ) : (
+                <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                  Final State
+                </span>
+              )}
             </div>
           </div>
+          {/* Clean 3D Canvas - no overlays */}
           <div className="flex-1 relative bg-gray-900">
             <Suspense fallback={<Loader3D />}>
               <Canvas>
@@ -1125,51 +1057,6 @@ export default function QuantumLab() {
                 />
               </Canvas>
             </Suspense>
-            {/* Step explanation overlay */}
-            {currentStep > 0 && currentStep <= operations.length && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                key={currentStep}
-                className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-900/95 to-transparent p-4"
-              >
-                <div className="text-xs space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded font-mono">
-                      {getStepExplanation(
-                        operations[currentStep - 1]?.gate,
-                        operations[currentStep - 1]?.qubits,
-                        currentStep - 1,
-                        operations.length
-                      ).quantumConcept}
-                    </span>
-                  </div>
-                  <p className="text-gray-300">
-                    {getStepExplanation(
-                      operations[currentStep - 1]?.gate,
-                      operations[currentStep - 1]?.qubits,
-                      currentStep - 1,
-                      operations.length
-                    ).blochEffect}
-                  </p>
-                </div>
-              </motion.div>
-            )}
-            {/* Initial state explanation */}
-            {currentStep === 0 && (
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-900/95 to-transparent p-4">
-                <div className="text-xs space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-green-500/20 text-green-300 px-2 py-0.5 rounded font-mono">
-                      INITIAL STATE
-                    </span>
-                  </div>
-                  <p className="text-gray-300">
-                    All qubits start in the |0⟩ state (pointing up on the Bloch sphere). This is the "ground state" - like a bit set to 0.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -1328,79 +1215,17 @@ export default function QuantumLab() {
           </div>
         </div>
 
-        {/* Current step explanation bar */}
-        <motion.div
-          key={currentStep}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50"
-        >
-          {currentStep === 0 ? (
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-green-400 text-xs font-bold">|0⟩</span>
-              </div>
-              <div>
-                <h4 className="text-white font-medium text-sm">Initial State</h4>
-                <p className="text-gray-400 text-xs mt-0.5">
-                  All {numQubits} qubit{numQubits > 1 ? 's are' : ' is'} initialized to |0⟩. On the Bloch sphere, this is the north pole.
-                  In quantum computing, we always start from a known state before applying gates.
-                </p>
-              </div>
-            </div>
-          ) : currentStep <= operations.length ? (
-            <div className="flex items-start gap-3">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-xs"
-                style={{ backgroundColor: GATE_INFO[operations[currentStep - 1]?.gate]?.color }}
-              >
-                {operations[currentStep - 1]?.gate}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-white font-medium text-sm">
-                    {getStepExplanation(
-                      operations[currentStep - 1]?.gate,
-                      operations[currentStep - 1]?.qubits,
-                      currentStep - 1,
-                      operations.length
-                    ).title}
-                  </h4>
-                </div>
-                <p className="text-gray-400 text-xs mt-0.5">
-                  {getStepExplanation(
-                    operations[currentStep - 1]?.gate,
-                    operations[currentStep - 1]?.qubits,
-                    currentStep - 1,
-                    operations.length
-                  ).explanation}
-                </p>
-                <p className="text-cyan-400 text-xs mt-1 font-medium">
-                  ↳ {getStepExplanation(
-                    operations[currentStep - 1]?.gate,
-                    operations[currentStep - 1]?.qubits,
-                    currentStep - 1,
-                    operations.length
-                  ).blochEffect}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
-                <Zap className="w-4 h-4 text-indigo-400" />
-              </div>
-              <div>
-                <h4 className="text-white font-medium text-sm">Final State</h4>
-                <p className="text-gray-400 text-xs mt-0.5">
-                  Circuit complete! {mode === 'simulation'
-                    ? 'Results are automatically calculated - see the probability distribution below.'
-                    : 'Click "Run on IQM" to execute on real quantum hardware.'}
-                </p>
-              </div>
-            </div>
-          )}
-        </motion.div>
+        {/* Compact step info */}
+        {currentStep > 0 && currentStep <= operations.length && (
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-xs text-gray-400 flex items-center gap-2"
+          >
+            <span className="text-cyan-400">{GATE_INFO[operations[currentStep - 1]?.gate]?.description}</span>
+          </motion.div>
+        )}
       </div>
 
       {/* Results / IQM Config */}
