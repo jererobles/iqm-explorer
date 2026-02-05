@@ -197,70 +197,625 @@ const BLOCH_ELEMENT_INFO: Record<string, {
   },
 }
 
-// Example circuits
-const EXAMPLES = [
+// Categorized example circuits with real-world applications
+const EXAMPLE_CATEGORIES = [
   {
-    name: 'Bell State',
-    code: `# Bell State - Quantum Entanglement
+    name: 'Fundamentals',
+    description: 'Core quantum concepts',
+    examples: [
+      {
+        name: 'Bell State',
+        description: 'Quantum entanglement basics',
+        code: `# ═══════════════════════════════════════════════════════════
+# BELL STATE - The Foundation of Quantum Entanglement
+# ═══════════════════════════════════════════════════════════
+#
+# WHAT YOU'LL LEARN:
+# • How entanglement correlates qubits instantly
+# • The building block for quantum teleportation & cryptography
+#
+# REAL-WORLD USE: Quantum key distribution (QKD) for unhackable
+# encryption - used by banks and governments today!
+# ═══════════════════════════════════════════════════════════
+
 from qiskit import QuantumCircuit
 
 qc = QuantumCircuit(2)
 
-# Hadamard creates superposition
+# Step 1: Create superposition on qubit 0
+# This puts qubit 0 in state |+⟩ = (|0⟩ + |1⟩)/√2
 qc.h(0)
 
-# CNOT creates entanglement
+# Step 2: Entangle qubits with CNOT
+# Now measuring one qubit instantly determines the other!
+# Result: |Φ+⟩ = (|00⟩ + |11⟩)/√2 - the Bell state
 qc.cx(0, 1)
 
 qc.measure_all()
 shots = 1024
+
+# TRY THIS: Run multiple times - you'll always get 00 or 11,
+# never 01 or 10. That's entanglement in action!
 `,
-  },
-  {
-    name: 'GHZ State',
-    code: `# GHZ State - 3-qubit entanglement
+      },
+      {
+        name: 'Superposition',
+        description: 'Quantum parallelism',
+        code: `# ═══════════════════════════════════════════════════════════
+# SUPERPOSITION - Quantum's Secret Weapon
+# ═══════════════════════════════════════════════════════════
+#
+# WHAT YOU'LL LEARN:
+# • A qubit can be 0 AND 1 simultaneously
+# • This enables quantum parallelism
+#
+# WHY IT MATTERS: N qubits in superposition = 2^N states at once
+# 50 qubits = more states than atoms in Earth!
+# ═══════════════════════════════════════════════════════════
+
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(1)
+
+# The Hadamard gate: |0⟩ → |+⟩ = (|0⟩ + |1⟩)/√2
+# 50% chance of 0, 50% chance of 1
+qc.h(0)
+
+qc.measure_all()
+shots = 1024
+
+# TRY THIS: Run 1024 shots - you'll get roughly 512 zeros
+# and 512 ones. True quantum randomness!
+`,
+      },
+      {
+        name: 'Interference',
+        description: 'Wave-like quantum behavior',
+        code: `# ═══════════════════════════════════════════════════════════
+# QUANTUM INTERFERENCE - Waves That Compute
+# ═══════════════════════════════════════════════════════════
+#
+# WHAT YOU'LL LEARN:
+# • Quantum states interfere like waves
+# • H-Z-H sequence = X gate (bit flip!)
+#
+# WHY IT MATTERS: Interference lets us amplify right answers
+# and cancel wrong ones - the heart of quantum speedup
+# ═══════════════════════════════════════════════════════════
+
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(1)
+
+# Watch the interference: H → Z → H = X
+qc.h(0)  # |0⟩ → |+⟩ = (|0⟩ + |1⟩)/√2
+qc.z(0)  # |+⟩ → |−⟩ = (|0⟩ - |1⟩)/√2  (phase flip)
+qc.h(0)  # |−⟩ → |1⟩ (interference!)
+
+qc.measure_all()
+shots = 1024
+
+# RESULT: Always 1! The phases interfere constructively
+# for |1⟩ and destructively for |0⟩
+`,
+      },
+      {
+        name: 'GHZ State',
+        description: '3-qubit entanglement',
+        code: `# ═══════════════════════════════════════════════════════════
+# GHZ STATE - Multi-Party Quantum Correlations
+# ═══════════════════════════════════════════════════════════
+#
+# Named after Greenberger, Horne, and Zeilinger (1989)
+#
+# WHAT YOU'LL LEARN:
+# • Extend entanglement beyond 2 qubits
+# • Create maximally entangled states
+#
+# REAL-WORLD USE: Quantum secret sharing - a secret is split
+# so that ALL parties must cooperate to recover it
+# ═══════════════════════════════════════════════════════════
+
 from qiskit import QuantumCircuit
 
 qc = QuantumCircuit(3)
 
-qc.h(0)
+# Create 3-qubit entanglement chain
+qc.h(0)      # Superposition on first qubit
+qc.cx(0, 1)  # Entangle qubit 0 → 1
+qc.cx(1, 2)  # Extend entanglement to qubit 2
+
+# Result: |GHZ⟩ = (|000⟩ + |111⟩)/√2
+qc.measure_all()
+shots = 1024
+
+# TRY THIS: You'll only see 000 or 111 - all three qubits
+# are perfectly correlated!
+`,
+      },
+    ],
+  },
+  {
+    name: 'Real-World Algorithms',
+    description: 'Industry applications',
+    examples: [
+      {
+        name: 'VQE (Chemistry)',
+        description: 'Drug discovery & materials',
+        code: `# ═══════════════════════════════════════════════════════════
+# VQE - VARIATIONAL QUANTUM EIGENSOLVER
+# ═══════════════════════════════════════════════════════════
+#
+# THE PROBLEM: Simulating molecules is exponentially hard
+# for classical computers. VQE makes it quantum-tractable!
+#
+# REAL-WORLD IMPACT:
+# • Roche & Biogen: Drug discovery simulations
+# • IBM: Simulated lithium hydride (LiH) molecule
+# • Could revolutionize battery & catalyst design
+#
+# HOW IT WORKS: Hybrid quantum-classical optimization
+# 1. Quantum computer prepares trial wave function
+# 2. Measure energy
+# 3. Classical optimizer adjusts parameters
+# 4. Repeat until minimum energy found
+# ═══════════════════════════════════════════════════════════
+
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(2)
+
+# Hardware-efficient ansatz for H2 molecule simulation
+# These parameters would be optimized classically
+
+# Layer 1: Create initial superposition
+qc.ry(0.5, 0)  # Parameterized rotation (θ₁ = 0.5)
+qc.ry(0.8, 1)  # Parameterized rotation (θ₂ = 0.8)
+
+# Entangling layer - captures electron correlation
 qc.cx(0, 1)
+
+# Layer 2: More variational freedom
+qc.ry(1.2, 0)  # θ₃ = 1.2
+qc.ry(0.3, 1)  # θ₄ = 0.3
+
+qc.measure_all()
+shots = 1024
+
+# In real VQE, you'd measure the molecular Hamiltonian
+# and optimize θ values to find ground state energy
+`,
+      },
+      {
+        name: 'QAOA (Optimization)',
+        description: 'Logistics & scheduling',
+        code: `# ═══════════════════════════════════════════════════════════
+# QAOA - QUANTUM APPROXIMATE OPTIMIZATION
+# ═══════════════════════════════════════════════════════════
+#
+# THE PROBLEM: Combinatorial optimization is NP-hard
+# (traveling salesman, job scheduling, portfolio optimization)
+#
+# REAL-WORLD IMPACT:
+# • BMW: Vehicle sensor placement optimization
+# • JPMorgan: Portfolio optimization research
+# • Airbus: Aircraft loading optimization
+#
+# THIS EXAMPLE: MaxCut problem
+# Goal: Partition graph nodes to maximize edges between groups
+# Applications: Network design, circuit layout, clustering
+# ═══════════════════════════════════════════════════════════
+
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(4)
+
+# QAOA Layer 1: Problem encoding + mixing
+# γ (gamma) encodes the problem, β (beta) explores solutions
+
+# Initial superposition - all possible cuts equally weighted
+qc.h(0)
+qc.h(1)
+qc.h(2)
+qc.h(3)
+
+# Cost layer: encode graph edges (γ = 0.8)
+# Edge 0-1
+qc.cx(0, 1)
+qc.rz(0.8, 1)
+qc.cx(0, 1)
+# Edge 1-2
+qc.cx(1, 2)
+qc.rz(0.8, 2)
+qc.cx(1, 2)
+# Edge 2-3
+qc.cx(2, 3)
+qc.rz(0.8, 3)
+qc.cx(2, 3)
+
+# Mixer layer: explore solution space (β = 0.4)
+qc.rx(0.8, 0)
+qc.rx(0.8, 1)
+qc.rx(0.8, 2)
+qc.rx(0.8, 3)
+
+qc.measure_all()
+shots = 1024
+
+# Best cuts have nodes split: e.g., {0,2} vs {1,3}
+`,
+      },
+      {
+        name: "Grover's Search",
+        description: 'Database search speedup',
+        code: `# ═══════════════════════════════════════════════════════════
+# GROVER'S ALGORITHM - Quadratic Speedup for Search
+# ═══════════════════════════════════════════════════════════
+#
+# THE PROBLEM: Finding a needle in a haystack
+# Classical: O(N) checks needed
+# Quantum: O(√N) - quadratic speedup!
+#
+# REAL-WORLD IMPACT:
+# • Database search acceleration
+# • Cryptographic key search
+# • Optimization problem solving
+#
+# THIS EXAMPLE: Search for |11⟩ among 4 states
+# Classical needs ~2 guesses, Grover finds it in 1 iteration!
+# ═══════════════════════════════════════════════════════════
+
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(2)
+
+# Step 1: Create uniform superposition (all states equal)
+qc.h(0)
+qc.h(1)
+
+# Step 2: Oracle - marks the solution |11⟩ with negative phase
+# This is a controlled-Z: flips phase only when both qubits are |1⟩
+qc.cz(0, 1)
+
+# Step 3: Diffusion operator (amplitude amplification)
+# Reflects amplitudes about the mean
+qc.h(0)
+qc.h(1)
+qc.z(0)
+qc.z(1)
+qc.cz(0, 1)
+qc.h(0)
+qc.h(1)
+
+qc.measure_all()
+shots = 1024
+
+# RESULT: |11⟩ now has ~100% probability!
+# The marked state got amplified, others cancelled out
+`,
+      },
+      {
+        name: 'Quantum Teleportation',
+        description: 'State transfer protocol',
+        code: `# ═══════════════════════════════════════════════════════════
+# QUANTUM TELEPORTATION - Transfer States Instantly
+# ═══════════════════════════════════════════════════════════
+#
+# NOT sci-fi teleportation! This transfers quantum STATE
+# (not matter) using entanglement + classical communication
+#
+# REAL-WORLD IMPACT:
+# • Quantum internet backbone protocol
+# • Demonstrated over 1,400 km via satellite (China, 2017)
+# • Essential for distributed quantum computing
+#
+# SETUP:
+# • Qubit 0: State to teleport (prepared in |+⟩)
+# • Qubit 1 & 2: Pre-shared entangled pair (Bell state)
+# • Goal: Transfer qubit 0's state to qubit 2
+# ═══════════════════════════════════════════════════════════
+
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(3)
+
+# Prepare the state to teleport: |+⟩ on qubit 0
+qc.h(0)
+
+# Create entangled pair between qubits 1 and 2
+# (These would be pre-shared between Alice and Bob)
+qc.h(1)
 qc.cx(1, 2)
 
+# TELEPORTATION PROTOCOL (Alice's operations)
+# Bell measurement on qubits 0 and 1
+qc.cx(0, 1)
+qc.h(0)
+
+# Bob's corrections (based on Alice's measurement)
+# In real protocol, these are classically controlled
+qc.cx(1, 2)
+qc.cz(0, 2)
+
 qc.measure_all()
 shots = 1024
+
+# Qubit 2 now has the original state of qubit 0!
 `,
+      },
+    ],
   },
   {
-    name: 'Superposition',
-    code: `# Single qubit superposition
+    name: 'Finance & ML',
+    description: 'Quantum advantage areas',
+    examples: [
+      {
+        name: 'Portfolio Optimization',
+        description: 'Risk-return balancing',
+        code: `# ═══════════════════════════════════════════════════════════
+# QUANTUM PORTFOLIO OPTIMIZATION
+# ═══════════════════════════════════════════════════════════
+#
+# THE PROBLEM: Select assets to maximize return while
+# minimizing risk - exponentially many combinations!
+#
+# REAL-WORLD IMPACT:
+# • Goldman Sachs: Derivatives pricing research
+# • JPMorgan: Portfolio optimization experiments
+# • BBVA: Dynamic asset allocation
+#
+# THIS EXAMPLE: 4-asset portfolio selection
+# Each qubit = include (1) or exclude (0) an asset
+# Encode risk/return tradeoff in the circuit
+# ═══════════════════════════════════════════════════════════
+
 from qiskit import QuantumCircuit
 
-qc = QuantumCircuit(1)
+qc = QuantumCircuit(4)
 
-# Hadamard creates |+> state
-qc.h(0)
+# Assets: Tech, Healthcare, Energy, Bonds
+# Initial superposition - consider all 16 portfolios
+qc.h(0)  # Tech
+qc.h(1)  # Healthcare
+qc.h(2)  # Energy
+qc.h(3)  # Bonds
+
+# Encode correlations (negative = diversification benefit)
+# Tech-Healthcare correlation
+qc.cx(0, 1)
+qc.rz(0.3, 1)  # Mild positive correlation
+qc.cx(0, 1)
+
+# Energy-Bonds anti-correlation (diversification!)
+qc.cx(2, 3)
+qc.rz(-0.5, 3)  # Negative = good for diversification
+qc.cx(2, 3)
+
+# Risk-adjusted mixer
+qc.rx(0.6, 0)
+qc.rx(0.6, 1)
+qc.rx(0.4, 2)  # Less weight on volatile energy
+qc.rx(0.8, 3)  # More weight on stable bonds
 
 qc.measure_all()
 shots = 1024
+
+# Higher probability states = better risk-adjusted portfolios
 `,
+      },
+      {
+        name: 'Quantum Classifier',
+        description: 'Machine learning kernel',
+        code: `# ═══════════════════════════════════════════════════════════
+# VARIATIONAL QUANTUM CLASSIFIER
+# ═══════════════════════════════════════════════════════════
+#
+# THE PROBLEM: Classification with quantum feature spaces
+# may find patterns invisible to classical ML
+#
+# REAL-WORLD RESEARCH:
+# • IBM + CERN: Particle collision classification
+# • Google Health: Medical image analysis
+# • Financial fraud detection
+#
+# THIS EXAMPLE: Binary classifier for 2D data
+# Encodes data point → quantum state → measure class
+# ═══════════════════════════════════════════════════════════
+
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(2)
+
+# DATA ENCODING: Map classical features to quantum states
+# Assume input data point: (x1=0.7, x2=1.2)
+x1 = 0.7
+x2 = 1.2
+
+# Angle encoding - data becomes rotation angles
+qc.ry(x1, 0)
+qc.ry(x2, 1)
+
+# VARIATIONAL LAYER 1 (trained parameters)
+qc.cx(0, 1)  # Entangle for feature interaction
+qc.ry(0.8, 0)  # θ₁ (learned)
+qc.ry(1.1, 1)  # θ₂ (learned)
+
+# VARIATIONAL LAYER 2
+qc.cx(1, 0)
+qc.ry(0.5, 0)  # θ₃ (learned)
+qc.ry(0.9, 1)  # θ₄ (learned)
+
+qc.measure_all()
+shots = 1024
+
+# Measurement of qubit 0: |0⟩ = class A, |1⟩ = class B
+# Train by adjusting θ values to minimize classification error
+`,
+      },
+      {
+        name: 'Monte Carlo Sampling',
+        description: 'Risk analysis speedup',
+        code: `# ═══════════════════════════════════════════════════════════
+# QUANTUM MONTE CARLO - Quadratic Speedup
+# ═══════════════════════════════════════════════════════════
+#
+# THE PROBLEM: Monte Carlo simulations for risk analysis
+# require millions of samples. Quantum can do it faster!
+#
+# REAL-WORLD IMPACT:
+# • Goldman Sachs: Targeting 1000x speedup
+# • Option pricing and Greeks calculation
+# • Value at Risk (VaR) estimation
+#
+# KEY TECHNIQUE: Quantum Amplitude Estimation
+# Classical: O(1/ε²) samples for ε precision
+# Quantum: O(1/ε) - quadratic speedup!
+# ═══════════════════════════════════════════════════════════
+
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(3)
+
+# PREPARE PROBABILITY DISTRIBUTION
+# Encode probability distribution of asset returns
+# Qubit 0-1: Represents 4 possible market scenarios
+qc.ry(1.2, 0)  # Scenario probabilities
+qc.ry(0.8, 1)
+qc.cx(0, 1)   # Correlate scenarios
+
+# PAYOFF FUNCTION
+# Qubit 2: Encodes option payoff (in-the-money or not)
+# Controlled rotation: payoff depends on market state
+qc.cx(0, 2)
+qc.ry(0.5, 2)
+qc.cx(1, 2)
+qc.ry(0.3, 2)
+
+qc.measure_all()
+shots = 1024
+
+# Amplitude of |1⟩ on qubit 2 ∝ expected payoff
+# Quantum amplitude estimation extracts this efficiently
+`,
+      },
+    ],
   },
   {
-    name: 'Interference',
-    code: `# Quantum Interference: H-Z-H = X
+    name: 'Physics Simulation',
+    description: 'Quantum simulating quantum',
+    examples: [
+      {
+        name: 'Ising Model',
+        description: 'Magnetic materials',
+        code: `# ═══════════════════════════════════════════════════════════
+# ISING MODEL - Simulating Magnetic Materials
+# ═══════════════════════════════════════════════════════════
+#
+# THE PHYSICS: Spins on a lattice interact magnetically
+# Understanding this → superconductors, phase transitions
+#
+# REAL-WORLD IMPACT:
+# • High-temperature superconductor design
+# • Magnetic memory materials
+# • Understanding phase transitions
+#
+# WHY QUANTUM: Classical simulation scales as 2^N
+# N=50 spins would need more memory than Earth has atoms!
+# ═══════════════════════════════════════════════════════════
+
 from qiskit import QuantumCircuit
 
-qc = QuantumCircuit(1)
+qc = QuantumCircuit(4)
 
+# Time evolution of 4-spin Ising chain
+# H = -J Σ ZᵢZᵢ₊₁ - h Σ Xᵢ
+
+# Initial state: all spins up |0000⟩
+# (This is already the default)
+
+# TROTTER STEP 1 (dt = 0.3, J = 1.0)
+# ZZ interactions between neighbors
+qc.cx(0, 1)
+qc.rz(0.6, 1)  # 2*J*dt
+qc.cx(0, 1)
+
+qc.cx(1, 2)
+qc.rz(0.6, 2)
+qc.cx(1, 2)
+
+qc.cx(2, 3)
+qc.rz(0.6, 3)
+qc.cx(2, 3)
+
+# Transverse field (h = 0.5)
+qc.rx(0.3, 0)  # 2*h*dt
+qc.rx(0.3, 1)
+qc.rx(0.3, 2)
+qc.rx(0.3, 3)
+
+qc.measure_all()
+shots = 1024
+
+# Shows how the magnetic system evolves in time!
+`,
+      },
+      {
+        name: 'Quantum Walk',
+        description: 'Quantum search primitive',
+        code: `# ═══════════════════════════════════════════════════════════
+# QUANTUM WALK - The Quantum Random Walk
+# ═══════════════════════════════════════════════════════════
+#
+# Classical random walk: Particle hops randomly
+# Quantum walk: Particle spreads as a WAVE, much faster!
+#
+# REAL-WORLD IMPACT:
+# • Faster graph algorithms (database search)
+# • Quantum PageRank for web ranking
+# • Quantum simulation of transport phenomena
+#
+# SPEEDUP: Quantum walk spreads as O(t) vs classical O(√t)
+# ═══════════════════════════════════════════════════════════
+
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(3)
+
+# 1D quantum walk on 4 positions (2 qubits)
+# Qubit 0: Coin (direction)
+# Qubits 1-2: Position (4 sites: 00, 01, 10, 11)
+
+# Initial: Coin in superposition, position at center
+qc.h(0)  # Coin toss
+
+# WALK STEP 1
+# Conditional shift based on coin
+qc.cx(0, 1)  # Move right if coin=1
+# Flip coin for next step
 qc.h(0)
-qc.z(0)
+
+# WALK STEP 2
+qc.cx(0, 1)
+qc.cx(0, 2)  # Larger shift
+qc.h(0)
+
+# WALK STEP 3
+qc.cx(0, 1)
 qc.h(0)
 
 qc.measure_all()
 shots = 1024
+
+# The walker spreads out quantumly - much faster than
+# classical diffusion!
 `,
+      },
+    ],
   },
 ]
+
+// Flatten for backward compatibility
+const EXAMPLES = EXAMPLE_CATEGORIES.flatMap(cat => cat.examples)
 
 // 3D Scene content for visualization with multiple view modes
 function VisualizationScene({
@@ -1080,20 +1635,31 @@ export default function QuantumLab() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="glass-card p-4"
+          className="glass-card p-5 max-h-96 overflow-y-auto"
         >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {EXAMPLES.map((ex) => (
-              <button
-                key={ex.name}
-                onClick={() => {
-                  setCode(ex.code)
-                  setShowExamples(false)
-                }}
-                className="p-3 text-left bg-gray-800/50 hover:bg-gray-700/50 rounded-lg transition-colors"
-              >
-                <div className="font-medium text-white text-sm">{ex.name}</div>
-              </button>
+          <div className="space-y-5">
+            {EXAMPLE_CATEGORIES.map((category) => (
+              <div key={category.name}>
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="text-sm font-semibold text-indigo-400">{category.name}</h4>
+                  <span className="text-xs text-gray-500">— {category.description}</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {category.examples.map((ex) => (
+                    <button
+                      key={ex.name}
+                      onClick={() => {
+                        setCode(ex.code)
+                        setShowExamples(false)
+                      }}
+                      className="p-3 text-left bg-gray-800/50 hover:bg-indigo-900/30 hover:border-indigo-500/50 border border-transparent rounded-lg transition-all group"
+                    >
+                      <div className="font-medium text-white text-sm group-hover:text-indigo-300 transition-colors">{ex.name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{ex.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </motion.div>
